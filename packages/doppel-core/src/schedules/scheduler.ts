@@ -8,24 +8,31 @@ import {
 } from '../terminal/pty-session-manager.js'
 import type { CreateScheduleInput, ScheduleRecord, ScheduleStore, UpdateScheduleInput } from './store.js'
 
+/** Dependencies and configuration for `ScheduleScheduler`. */
 export interface ScheduleSchedulerOptions {
+  /** Persistent schedule store used as the source of truth. */
   store: ScheduleStore
+  /** Terminal manager used to execute scheduled commands. */
   terminal: PtySessionManager
+  /** Maximum UTF-8 bytes retained for ephemeral scheduled command output. */
   outputLimitBytes?: number
 }
 
+/** Coordinates persisted schedules with cron tasks and terminal execution. */
 export class ScheduleScheduler {
   #store: ScheduleStore
   #terminal: PtySessionManager
   #tasks = new Map<string, ScheduledTask>()
   #outputLimitBytes: number
 
+  /** Create a scheduler around an existing schedule store and terminal manager. */
   constructor(options: ScheduleSchedulerOptions) {
     this.#store = options.store
     this.#terminal = options.terminal
     this.#outputLimitBytes = options.outputLimitBytes ?? DEFAULT_EPHEMERAL_OUTPUT_LIMIT_BYTES
   }
 
+  /** Register all enabled schedules from the store with cron. */
   start(): void {
     for (const schedule of this.#store.list()) {
       if (!schedule.enabled) {
@@ -44,10 +51,12 @@ export class ScheduleScheduler {
     }
   }
 
+  /** List schedules from the backing store. */
   list(): ScheduleRecord[] {
     return this.#store.list()
   }
 
+  /** Validate, persist, and register a new schedule. */
   create(input: CreateScheduleInput): ScheduleRecord {
     validateCron(input.cron)
 
@@ -63,6 +72,7 @@ export class ScheduleScheduler {
     return schedule
   }
 
+  /** Validate, persist, and reschedule updates to an existing schedule. */
   update(id: string, input: UpdateScheduleInput): ScheduleRecord {
     if (input.cron) {
       validateCron(input.cron)
@@ -78,11 +88,13 @@ export class ScheduleScheduler {
     return schedule
   }
 
+  /** Delete a schedule and unregister any active cron task. */
   delete(id: string): boolean {
     this.#unschedule(id)
     return this.#store.delete(id)
   }
 
+  /** Enable or disable a schedule and synchronize its cron task. */
   enable(id: string, enabled: boolean): ScheduleRecord {
     this.#unschedule(id)
     const schedule = this.#store.enable(id, enabled)
@@ -94,6 +106,7 @@ export class ScheduleScheduler {
     return schedule
   }
 
+  /** Run a schedule immediately without changing its cron registration. */
   async runNow(id: string): Promise<ScheduleRecord> {
     const schedule = this.#store.get(id)
 
@@ -104,6 +117,7 @@ export class ScheduleScheduler {
     return this.#runSchedule(schedule)
   }
 
+  /** Stop all active cron tasks managed by this scheduler. */
   close(): void {
     for (const id of this.#tasks.keys()) {
       this.#unschedule(id)
@@ -114,6 +128,7 @@ export class ScheduleScheduler {
     validateCron(schedule.cron)
     this.#unschedule(schedule.id)
 
+    // The persisted record is captured so cron-triggered runs use the last scheduled state.
     const task = cron.schedule(
       schedule.cron,
       () => {
@@ -157,6 +172,7 @@ export class ScheduleScheduler {
 
     try {
       if (schedule.mode === 'session') {
+        // Session-mode schedules enqueue commands and cannot observe command exit status.
         const sessionName = schedule.sessionName ?? DEFAULT_SESSION_NAME
         this.#terminal.ensure({
           name: sessionName,
@@ -196,6 +212,7 @@ export class ScheduleScheduler {
   }
 }
 
+/** Throw when an expression is not accepted by the cron engine. */
 export function validateCron(expression: string): void {
   if (!cron.validate(expression)) {
     throw new Error(`Invalid cron expression: ${expression}`)

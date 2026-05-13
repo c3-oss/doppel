@@ -4,38 +4,66 @@ import path from 'node:path'
 
 import Database from 'better-sqlite3'
 
+/** Execution strategy for a persisted command schedule. */
 export type ScheduleMode = 'ephemeral' | 'session'
 
+/** Persisted schedule state as exposed by the core package. */
 export interface ScheduleRecord {
+  /** Stable schedule identifier. */
   id: string
+  /** Human-readable schedule name. */
   name: string
+  /** Cron expression evaluated by the scheduler. */
   cron: string
+  /** Command string executed when the schedule runs. */
   command: string
+  /** Whether runs use an ephemeral PTY or dispatch into an interactive session. */
   mode: ScheduleMode
+  /** Target interactive session name when `mode` is `session`. */
   sessionName: string | null
+  /** Whether the schedule should be registered with the scheduler. */
   enabled: boolean
+  /** Optional working directory used when running the command. */
   cwd: string | null
+  /** Optional shell executable used when running the command. */
   shell: string | null
+  /** ISO timestamp for when the schedule was created. */
   createdAt: string
+  /** ISO timestamp for the most recent schedule metadata update. */
   updatedAt: string
+  /** ISO timestamp for the most recent run attempt. */
   lastRunAt: string | null
+  /** Status string from the most recent run attempt. */
   lastStatus: string | null
+  /** Exit code from the most recent ephemeral run, when available. */
   lastExitCode: number | null
+  /** Output tail or error message from the most recent run attempt. */
   lastOutput: string | null
 }
 
+/** Values accepted when creating a schedule. */
 export interface CreateScheduleInput {
+  /** Optional caller-supplied id; generated when omitted. */
   id?: string
+  /** Human-readable schedule name. */
   name: string
+  /** Cron expression evaluated by the scheduler. */
   cron: string
+  /** Command string executed when the schedule runs. */
   command: string
+  /** Execution mode; defaults to `ephemeral`. */
   mode?: ScheduleMode
+  /** Target interactive session name when `mode` is `session`. */
   sessionName?: string | null
+  /** Whether the schedule starts enabled; defaults to `true`. */
   enabled?: boolean
+  /** Optional working directory used when running the command. */
   cwd?: string | null
+  /** Optional shell executable used when running the command. */
   shell?: string | null
 }
 
+/** Values accepted when updating a schedule. */
 export type UpdateScheduleInput = Partial<
   Pick<
     ScheduleRecord,
@@ -54,8 +82,11 @@ export type UpdateScheduleInput = Partial<
   >
 >
 
+/** Options for the SQLite-backed schedule store. */
 export interface ScheduleStoreOptions {
+  /** Directory that contains `doppel.db` when `dbPath` is not set. */
   dataDir?: string
+  /** Explicit SQLite database path. */
   dbPath?: string
 }
 
@@ -77,11 +108,14 @@ interface ScheduleRow {
   lastOutput: string | null
 }
 
+/** SQLite-backed persistence for command schedules and run metadata. */
 export class ScheduleStore {
+  /** Resolved SQLite database path used by this store. */
   readonly dbPath: string
 
   #db: ReturnType<typeof Database>
 
+  /** Open the schedule database and apply required migrations. */
   constructor(options: ScheduleStoreOptions = {}) {
     this.dbPath = options.dbPath ?? resolveScheduleDatabasePath(options.dataDir)
     fs.mkdirSync(path.dirname(this.dbPath), { recursive: true })
@@ -90,6 +124,7 @@ export class ScheduleStore {
     this.#migrate()
   }
 
+  /** List all schedules ordered by creation time. */
   list(): ScheduleRecord[] {
     return this.#db
       .prepare<[], ScheduleRow>('select * from schedules order by createdAt asc')
@@ -97,11 +132,13 @@ export class ScheduleStore {
       .map(toScheduleRecord)
   }
 
+  /** Return a schedule by id, or `null` when it does not exist. */
   get(id: string): ScheduleRecord | null {
     const row = this.#db.prepare<[string], ScheduleRow>('select * from schedules where id = ?').get(id)
     return row ? toScheduleRecord(row) : null
   }
 
+  /** Create and persist a new schedule record. */
   create(input: CreateScheduleInput): ScheduleRecord {
     const now = new Date().toISOString()
     const schedule: ScheduleRecord = {
@@ -182,6 +219,7 @@ export class ScheduleStore {
     return schedule
   }
 
+  /** Update a schedule record or throw when the id does not exist. */
   update(id: string, input: UpdateScheduleInput): ScheduleRecord {
     const existing = this.get(id)
 
@@ -251,15 +289,18 @@ export class ScheduleStore {
     return updated
   }
 
+  /** Delete a schedule by id, returning whether a row was removed. */
   delete(id: string): boolean {
     const result = this.#db.prepare<[string], never>('delete from schedules where id = ?').run(id)
     return result.changes > 0
   }
 
+  /** Enable or disable a schedule and return the updated record. */
   enable(id: string, enabled: boolean): ScheduleRecord {
     return this.update(id, { enabled })
   }
 
+  /** Close the underlying SQLite connection if it is still open. */
   close(): void {
     if (this.#db.open) {
       this.#db.close()
@@ -267,6 +308,7 @@ export class ScheduleStore {
   }
 
   #migrate(): void {
+    // Keep migrations idempotent so embedded callers can open the store repeatedly.
     this.#db.exec(`
       create table if not exists schedules (
         id text primary key,
@@ -291,10 +333,12 @@ export class ScheduleStore {
   }
 }
 
+/** Return the default directory used for Doppel core data. */
 export function getDefaultDataDir(): string {
   return path.join(os.homedir(), '.doppel')
 }
 
+/** Resolve the schedule database path for an optional data directory. */
 export function resolveScheduleDatabasePath(dataDir?: string): string {
   return path.join(dataDir ?? getDefaultDataDir(), 'doppel.db')
 }

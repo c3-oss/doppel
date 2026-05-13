@@ -1,3 +1,4 @@
+/** Escape sequences supported by `PtySessionManager.sendKey()`. */
 export const terminalKeyMap = {
   enter: '\r',
   'ctrl-c': '\x03',
@@ -11,8 +12,10 @@ export const terminalKeyMap = {
   left: '\x1b[D',
 } as const
 
+/** Logical terminal key name accepted by the public terminal API. */
 export type TerminalKey = keyof typeof terminalKeyMap
 
+/** Resolve a logical terminal key name to the bytes written to the PTY. */
 export function mapTerminalKey(key: TerminalKey): string {
   return terminalKeyMap[key]
 }
