@@ -1,68 +1,65 @@
-import { Command } from 'commander';
+import { Command } from 'commander'
 
-import { writeJson } from '../output.js';
-import type { DoppelClientFactory } from '../trpc-client.js';
-import { createDoppelClient, getDefaultServerUrl } from '../trpc-client.js';
+import { writeJson } from '../output.js'
+import type { DoppelClientFactory } from '../trpc-client.js'
+import { createDoppelClient, getDefaultServerUrl } from '../trpc-client.js'
 
 export interface SessionEnsurePayload {
-  name: string;
-  shell?: string;
-  cwd?: string;
-  cols?: number;
-  rows?: number;
+  name: string
+  shell?: string
+  cwd?: string
+  cols?: number
+  rows?: number
 }
 
 export interface SessionCommandDeps {
-  clientFactory?: DoppelClientFactory;
-  stdout?: NodeJS.WriteStream;
+  clientFactory?: DoppelClientFactory
+  stdout?: NodeJS.WriteStream
 }
 
 export interface SessionStartOptions {
-  shell?: string;
-  cwd?: string;
-  cols?: string;
-  rows?: string;
+  shell?: string
+  cwd?: string
+  cols?: string
+  rows?: string
 }
 
 function parsePositiveInteger(value: string | undefined, label: string): number | undefined {
   if (value === undefined) {
-    return undefined;
+    return undefined
   }
 
-  const parsed = Number(value);
+  const parsed = Number(value)
   if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${label} must be a positive integer.`);
+    throw new Error(`${label} must be a positive integer.`)
   }
 
-  return parsed;
+  return parsed
 }
 
-export function buildSessionEnsurePayload(
-  name: string,
-  options: SessionStartOptions,
-): SessionEnsurePayload {
+export function buildSessionEnsurePayload(name: string, options: SessionStartOptions): SessionEnsurePayload {
   return {
     name,
     shell: options.shell,
     cwd: options.cwd,
     cols: parsePositiveInteger(options.cols, 'cols'),
     rows: parsePositiveInteger(options.rows, 'rows'),
-  };
+  }
 }
 
 export function sessionCommand(deps: SessionCommandDeps = {}): Command {
-  const clientFactory = deps.clientFactory ?? createDoppelClient;
-  const stdout = deps.stdout ?? process.stdout;
-  const command = new Command('session').description('Manage daemon sessions.');
+  const clientFactory = deps.clientFactory ?? createDoppelClient
+  const stdout = deps.stdout ?? process.stdout
+  const command = new Command('session').description('Manage daemon sessions.')
 
   command
     .command('list')
     .description('List daemon sessions.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
     .action(async (options: { url: string }) => {
-      const result = await clientFactory(options.url).query('sessions.list');
-      writeJson(stdout, result);
-    });
+      const result = await clientFactory(options.url).query('sessions.list')
+      writeJson(stdout, result)
+    })
 
   command
     .command('start')
@@ -77,14 +74,14 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
       async (
         name: string,
         options: SessionStartOptions & {
-          url: string;
+          url: string
         },
       ) => {
-        const payload = buildSessionEnsurePayload(name, options);
-        const result = await clientFactory(options.url).mutation('sessions.ensure', payload);
-        writeJson(stdout, result);
+        const payload = buildSessionEnsurePayload(name, options)
+        const result = await clientFactory(options.url).mutation('sessions.ensure', payload)
+        writeJson(stdout, result)
       },
-    );
+    )
 
   command
     .command('kill')
@@ -92,9 +89,9 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
     .argument('[name]', 'Session name.', 'default')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
     .action(async (name: string, options: { url: string }) => {
-      const result = await clientFactory(options.url).mutation('sessions.kill', { name });
-      writeJson(stdout, result);
-    });
+      const result = await clientFactory(options.url).mutation('sessions.kill', { name })
+      writeJson(stdout, result)
+    })
 
-  return command;
+  return command
 }

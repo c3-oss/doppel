@@ -1,118 +1,118 @@
-import { FitAddon } from '@xterm/addon-fit';
-import { Terminal } from '@xterm/xterm';
-import { CornerDownLeft, Keyboard, Plug, PlugZap, Power, Send, SquareTerminal } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { FitAddon } from '@xterm/addon-fit'
+import { Terminal } from '@xterm/xterm'
+import { CornerDownLeft, Keyboard, Plug, PlugZap, Power, Send, SquareTerminal } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import '@xterm/xterm/css/xterm.css';
+import '@xterm/xterm/css/xterm.css'
 
 type TerminalPanelProps = {
-  sessionName: string;
-};
+  sessionName: string
+}
 
-type TerminalConnectionState = 'connecting' | 'connected' | 'closed' | 'error';
+type TerminalConnectionState = 'connecting' | 'connected' | 'closed' | 'error'
 
 type TerminalMessage =
   | {
-      type: 'output';
-      data?: unknown;
+      type: 'output'
+      data?: unknown
     }
   | {
-      type: 'status';
-      session?: unknown;
+      type: 'status'
+      session?: unknown
     }
   | {
-      type: 'exit';
-      exitCode?: unknown;
-      signal?: unknown;
-    };
+      type: 'exit'
+      exitCode?: unknown
+      signal?: unknown
+    }
 
 function getTerminalWebSocketUrl(sessionName: string) {
-  const configuredServerUrl = import.meta.env.VITE_DOPPEL_SERVER_URL;
-  const baseUrl = new URL(configuredServerUrl ?? window.location.origin);
-  const websocketUrl = new URL(`/ws/terminal/${encodeURIComponent(sessionName)}`, baseUrl);
+  const configuredServerUrl = import.meta.env.VITE_DOPPEL_SERVER_URL
+  const baseUrl = new URL(configuredServerUrl ?? window.location.origin)
+  const websocketUrl = new URL(`/ws/terminal/${encodeURIComponent(sessionName)}`, baseUrl)
 
-  websocketUrl.protocol = baseUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+  websocketUrl.protocol = baseUrl.protocol === 'https:' ? 'wss:' : 'ws:'
 
-  return websocketUrl.toString();
+  return websocketUrl.toString()
 }
 
 function parseTerminalMessage(data: string): TerminalMessage | null {
   try {
-    const message = JSON.parse(data) as Partial<TerminalMessage>;
+    const message = JSON.parse(data) as Partial<TerminalMessage>
 
     if (message.type === 'output' || message.type === 'status' || message.type === 'exit') {
-      return message as TerminalMessage;
+      return message as TerminalMessage
     }
   } catch {
-    return null;
+    return null
   }
 
-  return null;
+  return null
 }
 
 function getSessionStatus(session: unknown) {
   if (!session || typeof session !== 'object') {
-    return undefined;
+    return undefined
   }
 
-  const status = (session as Record<string, unknown>).status;
+  const status = (session as Record<string, unknown>).status
 
-  return typeof status === 'string' ? status : undefined;
+  return typeof status === 'string' ? status : undefined
 }
 
 export function TerminalPanel({ sessionName }: TerminalPanelProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const terminalRef = useRef<Terminal | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
-  const [connectionState, setConnectionState] = useState<TerminalConnectionState>('connecting');
-  const [sessionStatus, setSessionStatus] = useState<string | undefined>();
-  const [command, setCommand] = useState('');
-  const [appendEnter, setAppendEnter] = useState(true);
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const terminalRef = useRef<Terminal | null>(null)
+  const fitAddonRef = useRef<FitAddon | null>(null)
+  const socketRef = useRef<WebSocket | null>(null)
+  const [connectionState, setConnectionState] = useState<TerminalConnectionState>('connecting')
+  const [sessionStatus, setSessionStatus] = useState<string | undefined>()
+  const [command, setCommand] = useState('')
+  const [appendEnter, setAppendEnter] = useState(true)
 
   const sendSocketMessage = useCallback((message: unknown) => {
-    const socket = socketRef.current;
+    const socket = socketRef.current
 
     if (!socket || socket.readyState !== WebSocket.OPEN) {
-      terminalRef.current?.writeln('\r\n[terminal disconnected]');
-      return false;
+      terminalRef.current?.writeln('\r\n[terminal disconnected]')
+      return false
     }
 
-    socket.send(JSON.stringify(message));
-    return true;
-  }, []);
+    socket.send(JSON.stringify(message))
+    return true
+  }, [])
 
   const sendInput = useCallback(
     (data: string) => {
       return sendSocketMessage({
         type: 'input',
         data,
-      });
+      })
     },
     [sendSocketMessage],
-  );
+  )
 
   const fitTerminal = useCallback(() => {
-    const terminal = terminalRef.current;
-    const fitAddon = fitAddonRef.current;
+    const terminal = terminalRef.current
+    const fitAddon = fitAddonRef.current
 
     if (!terminal || !fitAddon || !containerRef.current) {
-      return;
+      return
     }
 
-    fitAddon.fit();
+    fitAddon.fit()
     sendSocketMessage({
       type: 'resize',
       cols: terminal.cols,
       rows: terminal.rows,
-    });
-  }, [sendSocketMessage]);
+    })
+  }, [sendSocketMessage])
 
   useEffect(() => {
-    const container = containerRef.current;
+    const container = containerRef.current
 
     if (!container) {
-      return undefined;
+      return undefined
     }
 
     const terminal = new Terminal({
@@ -127,113 +127,113 @@ export function TerminalPanel({ sessionName }: TerminalPanelProps) {
         cursor: '#5eead4',
         selectionBackground: '#334155',
       },
-    });
-    const fitAddon = new FitAddon();
+    })
+    const fitAddon = new FitAddon()
 
-    terminal.loadAddon(fitAddon);
-    terminal.open(container);
-    terminal.focus();
+    terminal.loadAddon(fitAddon)
+    terminal.open(container)
+    terminal.focus()
 
     const inputSubscription = terminal.onData((data) => {
-      sendInput(data);
-    });
+      sendInput(data)
+    })
 
-    terminalRef.current = terminal;
-    fitAddonRef.current = fitAddon;
+    terminalRef.current = terminal
+    fitAddonRef.current = fitAddon
 
-    window.setTimeout(() => fitTerminal(), 0);
+    window.setTimeout(() => fitTerminal(), 0)
 
     return () => {
-      inputSubscription.dispose();
-      terminal.dispose();
-      terminalRef.current = null;
-      fitAddonRef.current = null;
-    };
-  }, [fitTerminal, sendInput]);
+      inputSubscription.dispose()
+      terminal.dispose()
+      terminalRef.current = null
+      fitAddonRef.current = null
+    }
+  }, [fitTerminal, sendInput])
 
   useEffect(() => {
-    const container = containerRef.current;
+    const container = containerRef.current
 
     if (!container) {
-      return undefined;
+      return undefined
     }
 
     const observer = new ResizeObserver(() => {
-      fitTerminal();
-    });
+      fitTerminal()
+    })
 
-    observer.observe(container);
-    window.addEventListener('resize', fitTerminal);
+    observer.observe(container)
+    window.addEventListener('resize', fitTerminal)
 
     return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', fitTerminal);
-    };
-  }, [fitTerminal]);
+      observer.disconnect()
+      window.removeEventListener('resize', fitTerminal)
+    }
+  }, [fitTerminal])
 
   useEffect(() => {
-    setConnectionState('connecting');
-    setSessionStatus(undefined);
-    terminalRef.current?.reset();
-    terminalRef.current?.writeln(`[connecting to ${sessionName}]`);
+    setConnectionState('connecting')
+    setSessionStatus(undefined)
+    terminalRef.current?.reset()
+    terminalRef.current?.writeln(`[connecting to ${sessionName}]`)
 
-    const socket = new WebSocket(getTerminalWebSocketUrl(sessionName));
-    socketRef.current = socket;
+    const socket = new WebSocket(getTerminalWebSocketUrl(sessionName))
+    socketRef.current = socket
 
     socket.addEventListener('open', () => {
-      setConnectionState('connected');
-      fitTerminal();
-    });
+      setConnectionState('connected')
+      fitTerminal()
+    })
 
     socket.addEventListener('message', (event: MessageEvent<string>) => {
-      const terminal = terminalRef.current;
-      const message = parseTerminalMessage(event.data);
+      const terminal = terminalRef.current
+      const message = parseTerminalMessage(event.data)
 
       if (!message || !terminal) {
-        return;
+        return
       }
 
       if (message.type === 'output') {
-        terminal.write(String(message.data ?? ''));
-        return;
+        terminal.write(String(message.data ?? ''))
+        return
       }
 
       if (message.type === 'status') {
-        setSessionStatus(getSessionStatus(message.session));
-        return;
+        setSessionStatus(getSessionStatus(message.session))
+        return
       }
 
-      const exitCode = typeof message.exitCode === 'number' ? String(message.exitCode) : 'unknown';
-      const signal = typeof message.signal === 'string' ? ` (${message.signal})` : '';
+      const exitCode = typeof message.exitCode === 'number' ? String(message.exitCode) : 'unknown'
+      const signal = typeof message.signal === 'string' ? ` (${message.signal})` : ''
 
-      terminal.writeln(`\r\n[process exited: ${exitCode}${signal}]`);
-    });
+      terminal.writeln(`\r\n[process exited: ${exitCode}${signal}]`)
+    })
 
     socket.addEventListener('close', () => {
-      setConnectionState('closed');
-    });
+      setConnectionState('closed')
+    })
 
     socket.addEventListener('error', () => {
-      setConnectionState('error');
-    });
+      setConnectionState('error')
+    })
 
     return () => {
-      socketRef.current = null;
-      socket.close();
-    };
-  }, [fitTerminal, sessionName]);
+      socketRef.current = null
+      socket.close()
+    }
+  }, [fitTerminal, sessionName])
 
   const submitCommand = () => {
-    const payload = appendEnter ? `${command}\r` : command;
+    const payload = appendEnter ? `${command}\r` : command
 
     if (payload.length === 0) {
-      return;
+      return
     }
 
     if (sendInput(payload)) {
-      setCommand('');
+      setCommand('')
     }
-  };
+  }
 
   return (
     <section className="terminal-panel" aria-label="Terminal">
@@ -262,8 +262,8 @@ export function TerminalPanel({ sessionName }: TerminalPanelProps) {
       <form
         className="command-bar"
         onSubmit={(event) => {
-          event.preventDefault();
-          submitCommand();
+          event.preventDefault()
+          submitCommand()
         }}
       >
         <input
@@ -275,11 +275,7 @@ export function TerminalPanel({ sessionName }: TerminalPanelProps) {
           value={command}
         />
         <label className="toggle-label">
-          <input
-            checked={appendEnter}
-            onChange={(event) => setAppendEnter(event.target.checked)}
-            type="checkbox"
-          />
+          <input checked={appendEnter} onChange={(event) => setAppendEnter(event.target.checked)} type="checkbox" />
           Enter
         </label>
         <button className="primary-button" type="submit">
@@ -303,5 +299,5 @@ export function TerminalPanel({ sessionName }: TerminalPanelProps) {
         </button>
       </div>
     </section>
-  );
+  )
 }

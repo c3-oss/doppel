@@ -1,21 +1,21 @@
-import { Command } from 'commander';
-import { describe, expect, it } from 'vitest';
+import { Command } from 'commander'
+import { describe, expect, it } from 'vitest'
 
-import { buildSendCommandPayload, buildSendKeyPayload, sendCommand } from '../commands/send.js';
-import type { DoppelClient } from '../trpc-client.js';
+import { buildSendCommandPayload, buildSendKeyPayload, sendCommand } from '../commands/send.js'
+import type { DoppelClient } from '../trpc-client.js'
 
 function createStdout() {
-  let output = '';
+  let output = ''
 
   return {
     stdout: {
       write(chunk: string) {
-        output += chunk;
-        return true;
+        output += chunk
+        return true
       },
     } as NodeJS.WriteStream,
     output: () => output,
-  };
+  }
 }
 
 describe('send command helpers', () => {
@@ -28,8 +28,8 @@ describe('send command helpers', () => {
       name: 'work',
       data: 'pnpm test -- health',
       enter: true,
-    });
-  });
+    })
+  })
 
   it('honors no-enter and raw escape decoding', () => {
     expect(
@@ -42,23 +42,23 @@ describe('send command helpers', () => {
       name: 'default',
       data: 'first\nsecond\tline',
       enter: false,
-    });
-  });
+    })
+  })
 
   it('normalizes accepted key names', () => {
     expect(buildSendKeyPayload('CTRL-C', { session: 'ops' })).toEqual({
       name: 'ops',
       key: 'ctrl-c',
-    });
-  });
+    })
+  })
 
   it('rejects unsupported keys', () => {
-    expect(() => buildSendKeyPayload('home', {})).toThrow('Unsupported key "home".');
-  });
+    expect(() => buildSendKeyPayload('home', {})).toThrow('Unsupported key "home".')
+  })
 
   it('sends command payloads through an injected client', async () => {
-    const stdout = createStdout();
-    const calls: Array<{ url: string; path: string; input: unknown }> = [];
+    const stdout = createStdout()
+    const calls: Array<{ url: string; path: string; input: unknown }> = []
     const client: DoppelClient = {
       query: async <TOutput = unknown>() => null as TOutput,
       mutation: async <TOutput = unknown>(path: string, input?: unknown) => {
@@ -66,20 +66,20 @@ describe('send command helpers', () => {
           url: 'http://daemon.test',
           path,
           input,
-        });
+        })
         return {
           z: 1,
           a: true,
-        } as TOutput;
+        } as TOutput
       },
-    };
-    const program = new Command().exitOverride();
+    }
+    const program = new Command().exitOverride()
     program.addCommand(
       sendCommand({
         clientFactory: () => client,
         stdout: stdout.stdout,
       }),
-    );
+    )
 
     await program.parseAsync([
       'node',
@@ -92,7 +92,7 @@ describe('send command helpers', () => {
       '--no-enter',
       '--url',
       'http://daemon.test',
-    ]);
+    ])
 
     expect(calls).toEqual([
       {
@@ -104,7 +104,7 @@ describe('send command helpers', () => {
           enter: false,
         },
       },
-    ]);
-    expect(stdout.output()).toBe('{"a":true,"z":1}\n');
-  });
-});
+    ])
+    expect(stdout.output()).toBe('{"a":true,"z":1}\n')
+  })
+})

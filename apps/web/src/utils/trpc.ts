@@ -1,13 +1,13 @@
-import { QueryClient } from '@tanstack/react-query';
-import { getUntypedClient, httpBatchLink } from '@trpc/client';
-import superjson from 'superjson';
+import { QueryClient } from '@tanstack/react-query'
+import { getUntypedClient, httpBatchLink } from '@trpc/client'
+import superjson from 'superjson'
 
-import { trpc } from '../trpc.js';
+import { trpc } from '../trpc.js'
 
-export const queryClient = new QueryClient();
+export const queryClient = new QueryClient()
 
 export function createDoppelTrpcClient() {
-  const serverUrl = import.meta.env.VITE_DOPPEL_SERVER_URL ?? 'http://localhost:3000';
+  const serverUrl = import.meta.env.VITE_DOPPEL_SERVER_URL ?? 'http://localhost:3000'
 
   return trpc.createClient({
     links: [
@@ -16,15 +16,15 @@ export function createDoppelTrpcClient() {
         url: new URL('/trpc', serverUrl).toString(),
       }),
     ],
-  });
+  })
 }
 
-const daemonTrpcClient = getUntypedClient(createDoppelTrpcClient());
+const daemonTrpcClient = getUntypedClient(createDoppelTrpcClient())
 
 export function daemonQuery(path: string, input?: unknown) {
-  return daemonTrpcClient.query(path, input);
+  return daemonTrpcClient.query(path, input)
 }
 
 export function daemonMutation(path: string, input?: unknown) {
-  return daemonTrpcClient.mutation(path, input);
+  return daemonTrpcClient.mutation(path, input)
 }

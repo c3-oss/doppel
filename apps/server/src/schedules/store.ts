@@ -1,39 +1,39 @@
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3'
 
-export type ScheduleMode = 'ephemeral' | 'session';
+export type ScheduleMode = 'ephemeral' | 'session'
 
 export interface ScheduleRecord {
-  id: string;
-  name: string;
-  cron: string;
-  command: string;
-  mode: ScheduleMode;
-  sessionName: string | null;
-  enabled: boolean;
-  cwd: string | null;
-  shell: string | null;
-  createdAt: string;
-  updatedAt: string;
-  lastRunAt: string | null;
-  lastStatus: string | null;
-  lastExitCode: number | null;
-  lastOutput: string | null;
+  id: string
+  name: string
+  cron: string
+  command: string
+  mode: ScheduleMode
+  sessionName: string | null
+  enabled: boolean
+  cwd: string | null
+  shell: string | null
+  createdAt: string
+  updatedAt: string
+  lastRunAt: string | null
+  lastStatus: string | null
+  lastExitCode: number | null
+  lastOutput: string | null
 }
 
 export interface CreateScheduleInput {
-  id?: string;
-  name: string;
-  cron: string;
-  command: string;
-  mode?: ScheduleMode;
-  sessionName?: string | null;
-  enabled?: boolean;
-  cwd?: string | null;
-  shell?: string | null;
+  id?: string
+  name: string
+  cron: string
+  command: string
+  mode?: ScheduleMode
+  sessionName?: string | null
+  enabled?: boolean
+  cwd?: string | null
+  shell?: string | null
 }
 
 export type UpdateScheduleInput = Partial<
@@ -52,60 +52,58 @@ export type UpdateScheduleInput = Partial<
     | 'lastExitCode'
     | 'lastOutput'
   >
->;
+>
 
 export interface ScheduleStoreOptions {
-  dataDir?: string;
-  dbPath?: string;
+  dataDir?: string
+  dbPath?: string
 }
 
 interface ScheduleRow {
-  id: string;
-  name: string;
-  cron: string;
-  command: string;
-  mode: string;
-  sessionName: string | null;
-  enabled: 0 | 1;
-  cwd: string | null;
-  shell: string | null;
-  createdAt: string;
-  updatedAt: string;
-  lastRunAt: string | null;
-  lastStatus: string | null;
-  lastExitCode: number | null;
-  lastOutput: string | null;
+  id: string
+  name: string
+  cron: string
+  command: string
+  mode: string
+  sessionName: string | null
+  enabled: 0 | 1
+  cwd: string | null
+  shell: string | null
+  createdAt: string
+  updatedAt: string
+  lastRunAt: string | null
+  lastStatus: string | null
+  lastExitCode: number | null
+  lastOutput: string | null
 }
 
 export class ScheduleStore {
-  readonly dbPath: string;
+  readonly dbPath: string
 
-  #db: ReturnType<typeof Database>;
+  #db: ReturnType<typeof Database>
 
   constructor(options: ScheduleStoreOptions = {}) {
-    this.dbPath = options.dbPath ?? resolveScheduleDatabasePath(options.dataDir);
-    fs.mkdirSync(path.dirname(this.dbPath), { recursive: true });
-    this.#db = new Database(this.dbPath);
-    this.#db.pragma('journal_mode = WAL');
-    this.#migrate();
+    this.dbPath = options.dbPath ?? resolveScheduleDatabasePath(options.dataDir)
+    fs.mkdirSync(path.dirname(this.dbPath), { recursive: true })
+    this.#db = new Database(this.dbPath)
+    this.#db.pragma('journal_mode = WAL')
+    this.#migrate()
   }
 
   list(): ScheduleRecord[] {
     return this.#db
       .prepare<[], ScheduleRow>('select * from schedules order by createdAt asc')
       .all()
-      .map(toScheduleRecord);
+      .map(toScheduleRecord)
   }
 
   get(id: string): ScheduleRecord | null {
-    const row = this.#db
-      .prepare<[string], ScheduleRow>('select * from schedules where id = ?')
-      .get(id);
-    return row ? toScheduleRecord(row) : null;
+    const row = this.#db.prepare<[string], ScheduleRow>('select * from schedules where id = ?').get(id)
+    return row ? toScheduleRecord(row) : null
   }
 
   create(input: CreateScheduleInput): ScheduleRecord {
-    const now = new Date().toISOString();
+    const now = new Date().toISOString()
     const schedule: ScheduleRecord = {
       id: input.id ?? crypto.randomUUID(),
       name: input.name,
@@ -122,22 +120,22 @@ export class ScheduleStore {
       lastStatus: null,
       lastExitCode: null,
       lastOutput: null,
-    };
+    }
 
     this.#db
       .prepare<
         {
-          id: string;
-          name: string;
-          cron: string;
-          command: string;
-          mode: ScheduleMode;
-          sessionName: string | null;
-          enabled: 0 | 1;
-          cwd: string | null;
-          shell: string | null;
-          createdAt: string;
-          updatedAt: string;
+          id: string
+          name: string
+          cron: string
+          command: string
+          mode: ScheduleMode
+          sessionName: string | null
+          enabled: 0 | 1
+          cwd: string | null
+          shell: string | null
+          createdAt: string
+          updatedAt: string
         },
         never
       >(
@@ -179,41 +177,41 @@ export class ScheduleStore {
         shell: schedule.shell,
         createdAt: schedule.createdAt,
         updatedAt: schedule.updatedAt,
-      });
+      })
 
-    return schedule;
+    return schedule
   }
 
   update(id: string, input: UpdateScheduleInput): ScheduleRecord {
-    const existing = this.get(id);
+    const existing = this.get(id)
 
     if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
+      throw new Error(`Schedule not found: ${id}`)
     }
 
     const updated: ScheduleRecord = {
       ...existing,
       ...input,
       updatedAt: new Date().toISOString(),
-    };
+    }
 
     this.#db
       .prepare<
         {
-          id: string;
-          name: string;
-          cron: string;
-          command: string;
-          mode: ScheduleMode;
-          sessionName: string | null;
-          enabled: 0 | 1;
-          cwd: string | null;
-          shell: string | null;
-          updatedAt: string;
-          lastRunAt: string | null;
-          lastStatus: string | null;
-          lastExitCode: number | null;
-          lastOutput: string | null;
+          id: string
+          name: string
+          cron: string
+          command: string
+          mode: ScheduleMode
+          sessionName: string | null
+          enabled: 0 | 1
+          cwd: string | null
+          shell: string | null
+          updatedAt: string
+          lastRunAt: string | null
+          lastStatus: string | null
+          lastExitCode: number | null
+          lastOutput: string | null
         },
         never
       >(
@@ -248,23 +246,23 @@ export class ScheduleStore {
         lastStatus: updated.lastStatus,
         lastExitCode: updated.lastExitCode,
         lastOutput: updated.lastOutput,
-      });
+      })
 
-    return updated;
+    return updated
   }
 
   delete(id: string): boolean {
-    const result = this.#db.prepare<[string], never>('delete from schedules where id = ?').run(id);
-    return result.changes > 0;
+    const result = this.#db.prepare<[string], never>('delete from schedules where id = ?').run(id)
+    return result.changes > 0
   }
 
   enable(id: string, enabled: boolean): ScheduleRecord {
-    return this.update(id, { enabled });
+    return this.update(id, { enabled })
   }
 
   close(): void {
     if (this.#db.open) {
-      this.#db.close();
+      this.#db.close()
     }
   }
 
@@ -289,16 +287,16 @@ export class ScheduleStore {
       );
 
       create index if not exists schedules_enabled_idx on schedules(enabled);
-    `);
+    `)
   }
 }
 
 export function getDefaultDataDir(): string {
-  return path.join(os.homedir(), '.doppel');
+  return path.join(os.homedir(), '.doppel')
 }
 
 export function resolveScheduleDatabasePath(dataDir?: string): string {
-  return path.join(dataDir ?? getDefaultDataDir(), 'doppel.db');
+  return path.join(dataDir ?? getDefaultDataDir(), 'doppel.db')
 }
 
 function toScheduleRecord(row: ScheduleRow): ScheduleRecord {
@@ -318,13 +316,13 @@ function toScheduleRecord(row: ScheduleRow): ScheduleRecord {
     lastStatus: row.lastStatus,
     lastExitCode: row.lastExitCode,
     lastOutput: row.lastOutput,
-  };
+  }
 }
 
 function toScheduleMode(value: string): ScheduleMode {
   if (value === 'ephemeral' || value === 'session') {
-    return value;
+    return value
   }
 
-  throw new Error(`Unsupported schedule mode: ${value}`);
+  throw new Error(`Unsupported schedule mode: ${value}`)
 }

@@ -1,86 +1,77 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Play,
-  Plus,
-  RefreshCcw,
-  RotateCw,
-  Save,
-  ToggleLeft,
-  ToggleRight,
-  Trash2,
-} from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Play, Plus, RefreshCcw, RotateCw, Save, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
-import { TerminalPanel } from '../components/TerminalPanel.js';
-import { daemonMutation, daemonQuery } from '../utils/trpc.js';
+import { TerminalPanel } from '../components/TerminalPanel.js'
+import { daemonMutation, daemonQuery } from '../utils/trpc.js'
 
-const DEFAULT_SESSION = 'default';
+const DEFAULT_SESSION = 'default'
 
 type SessionSummary = {
-  name: string;
-  status?: string;
-  command?: string;
-  cwd?: string;
-  exitCode?: number | null;
-};
+  name: string
+  status?: string
+  command?: string
+  cwd?: string
+  exitCode?: number | null
+}
 
 type ScheduleSummary = {
-  id: string;
-  name: string;
-  sessionName: string;
-  command: string;
-  cron?: string;
-  enabled: boolean;
-  lastRunAt?: string;
-  nextRunAt?: string;
-};
+  id: string
+  name: string
+  sessionName: string
+  command: string
+  cron?: string
+  enabled: boolean
+  lastRunAt?: string
+  nextRunAt?: string
+}
 
 function getInitialSessionName() {
-  const sessionName = new URLSearchParams(window.location.search).get('session')?.trim();
+  const sessionName = new URLSearchParams(window.location.search).get('session')?.trim()
 
-  return sessionName || DEFAULT_SESSION;
+  return sessionName || DEFAULT_SESSION
 }
 
 function asRecord(value: unknown) {
   if (!value || typeof value !== 'object') {
-    return undefined;
+    return undefined
   }
 
-  return value as Record<string, unknown>;
+  return value as Record<string, unknown>
 }
 
 function stringFrom(value: unknown) {
-  return typeof value === 'string' ? value : undefined;
+  return typeof value === 'string' ? value : undefined
 }
 
 function numberOrNullFrom(value: unknown) {
-  return typeof value === 'number' ? value : value === null ? null : undefined;
+  return typeof value === 'number' ? value : value === null ? null : undefined
 }
 
 function arrayFromResponse(value: unknown, key: string) {
   if (Array.isArray(value)) {
-    return value;
+    return value
   }
 
-  const record = asRecord(value);
-  const collection = record?.[key];
+  const record = asRecord(value)
+  const collection = record?.[key]
 
-  return Array.isArray(collection) ? collection : [];
+  return Array.isArray(collection) ? collection : []
 }
 
 function normalizeSession(value: unknown, fallbackName: string): SessionSummary {
   if (typeof value === 'string') {
     return {
       name: value,
-    };
+    }
   }
 
-  const record = asRecord(value);
+  const record = asRecord(value)
 
   if (!record) {
     return {
       name: fallbackName,
-    };
+    }
   }
 
   return {
@@ -89,20 +80,18 @@ function normalizeSession(value: unknown, fallbackName: string): SessionSummary 
     command: stringFrom(record.command),
     cwd: stringFrom(record.cwd),
     exitCode: numberOrNullFrom(record.exitCode),
-  };
+  }
 }
 
 function normalizeSessions(value: unknown) {
-  return arrayFromResponse(value, 'sessions').map((session, index) =>
-    normalizeSession(session, `session-${index + 1}`),
-  );
+  return arrayFromResponse(value, 'sessions').map((session, index) => normalizeSession(session, `session-${index + 1}`))
 }
 
 function normalizeSchedule(value: unknown, fallbackIndex: number): ScheduleSummary {
-  const record = asRecord(value);
+  const record = asRecord(value)
 
   if (!record) {
-    const fallbackName = `schedule-${fallbackIndex + 1}`;
+    const fallbackName = `schedule-${fallbackIndex + 1}`
 
     return {
       id: fallbackName,
@@ -110,10 +99,10 @@ function normalizeSchedule(value: unknown, fallbackIndex: number): ScheduleSumma
       sessionName: DEFAULT_SESSION,
       command: '',
       enabled: false,
-    };
+    }
   }
 
-  const id = stringFrom(record.id) ?? stringFrom(record.name) ?? `schedule-${fallbackIndex + 1}`;
+  const id = stringFrom(record.id) ?? stringFrom(record.name) ?? `schedule-${fallbackIndex + 1}`
 
   return {
     id,
@@ -124,72 +113,69 @@ function normalizeSchedule(value: unknown, fallbackIndex: number): ScheduleSumma
     enabled: Boolean(record.enabled),
     lastRunAt: stringFrom(record.lastRunAt),
     nextRunAt: stringFrom(record.nextRunAt),
-  };
+  }
 }
 
 function normalizeSchedules(value: unknown) {
-  return arrayFromResponse(value, 'schedules').map(normalizeSchedule);
+  return arrayFromResponse(value, 'schedules').map(normalizeSchedule)
 }
 
 function formatDate(value?: string) {
   if (!value) {
-    return 'Not scheduled';
+    return 'Not scheduled'
   }
 
-  const timestamp = new Date(value);
+  const timestamp = new Date(value)
 
   if (Number.isNaN(timestamp.getTime())) {
-    return value;
+    return value
   }
 
-  return timestamp.toLocaleString();
+  return timestamp.toLocaleString()
 }
 
 export function DaemonPage() {
-  const queryClient = useQueryClient();
-  const [selectedSession, setSelectedSession] = useState(getInitialSessionName);
-  const [sessionDraft, setSessionDraft] = useState(selectedSession);
-  const [scheduleName, setScheduleName] = useState('');
-  const [scheduleCommand, setScheduleCommand] = useState('');
-  const [scheduleCron, setScheduleCron] = useState('');
-  const [scheduleEnabled, setScheduleEnabled] = useState(true);
+  const queryClient = useQueryClient()
+  const [selectedSession, setSelectedSession] = useState(getInitialSessionName)
+  const [sessionDraft, setSessionDraft] = useState(selectedSession)
+  const [scheduleName, setScheduleName] = useState('')
+  const [scheduleCommand, setScheduleCommand] = useState('')
+  const [scheduleCron, setScheduleCron] = useState('')
+  const [scheduleEnabled, setScheduleEnabled] = useState(true)
 
   const sessionsQuery = useQuery({
     queryKey: ['daemon', 'sessions'],
     queryFn: async () => normalizeSessions(await daemonQuery('sessions.list')),
     refetchInterval: 5_000,
-  });
+  })
 
   const selectedSessionQuery = useQuery({
     queryKey: ['daemon', 'sessions', selectedSession],
     queryFn: async () =>
-      normalizeSession(
-        await daemonQuery('sessions.get', { name: selectedSession }),
-        selectedSession,
-      ),
+      normalizeSession(await daemonQuery('sessions.get', { name: selectedSession }), selectedSession),
     refetchInterval: 3_000,
     retry: 1,
-  });
+  })
 
   const schedulesQuery = useQuery({
     queryKey: ['daemon', 'schedules'],
     queryFn: async () => normalizeSchedules(await daemonQuery('schedules.list')),
     refetchInterval: 5_000,
-  });
+  })
 
   const ensureSession = useMutation({
     mutationFn: (name: string) => daemonMutation('sessions.ensure', { name }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['daemon', 'sessions'] });
+      await queryClient.invalidateQueries({ queryKey: ['daemon', 'sessions'] })
     },
-  });
+  })
 
   const killSession = useMutation({
     mutationFn: (name: string) => daemonMutation('sessions.kill', { name }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['daemon', 'sessions'] });
+      await queryClient.invalidateQueries({ queryKey: ['daemon', 'sessions'] })
     },
-  });
+  })
 
   const createSchedule = useMutation({
     mutationFn: () =>
@@ -201,65 +187,65 @@ export function DaemonPage() {
         enabled: scheduleEnabled,
       }),
     onSuccess: async () => {
-      setScheduleName('');
-      setScheduleCommand('');
-      setScheduleCron('');
-      setScheduleEnabled(true);
-      await queryClient.invalidateQueries({ queryKey: ['daemon', 'schedules'] });
+      setScheduleName('')
+      setScheduleCommand('')
+      setScheduleCron('')
+      setScheduleEnabled(true)
+      await queryClient.invalidateQueries({ queryKey: ['daemon', 'schedules'] })
     },
-  });
+  })
 
   const deleteSchedule = useMutation({
     mutationFn: (id: string) => daemonMutation('schedules.delete', { id }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['daemon', 'schedules'] });
+      await queryClient.invalidateQueries({ queryKey: ['daemon', 'schedules'] })
     },
-  });
+  })
 
   const setScheduleEnabledState = useMutation({
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
       daemonMutation('schedules.enable', { id, enabled }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['daemon', 'schedules'] });
+      await queryClient.invalidateQueries({ queryKey: ['daemon', 'schedules'] })
     },
-  });
+  })
 
   const runScheduleNow = useMutation({
     mutationFn: (id: string) => daemonMutation('schedules.runNow', { id }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['daemon', 'schedules'] });
+      await queryClient.invalidateQueries({ queryKey: ['daemon', 'schedules'] })
     },
-  });
+  })
 
   const sessionOptions = useMemo(() => {
-    const sessionNames = new Set([selectedSession]);
+    const sessionNames = new Set([selectedSession])
 
     for (const session of sessionsQuery.data ?? []) {
-      sessionNames.add(session.name);
+      sessionNames.add(session.name)
     }
 
-    return Array.from(sessionNames).sort((left, right) => left.localeCompare(right));
-  }, [selectedSession, sessionsQuery.data]);
+    return Array.from(sessionNames).sort((left, right) => left.localeCompare(right))
+  }, [selectedSession, sessionsQuery.data])
 
   const selectedSessionDetails = selectedSessionQuery.data ?? {
     name: selectedSession,
-  };
+  }
 
   useEffect(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('session', selectedSession);
-    window.history.replaceState(null, '', url);
-    setSessionDraft(selectedSession);
-    ensureSession.mutate(selectedSession);
-  }, [ensureSession.mutate, selectedSession]);
+    const url = new URL(window.location.href)
+    url.searchParams.set('session', selectedSession)
+    window.history.replaceState(null, '', url)
+    setSessionDraft(selectedSession)
+    ensureSession.mutate(selectedSession)
+  }, [ensureSession.mutate, selectedSession])
 
   const selectSession = (name: string) => {
-    const nextSession = name.trim();
+    const nextSession = name.trim()
 
     if (nextSession.length > 0) {
-      setSelectedSession(nextSession);
+      setSelectedSession(nextSession)
     }
-  };
+  }
 
   const daemonError =
     sessionsQuery.error ??
@@ -270,7 +256,7 @@ export function DaemonPage() {
     createSchedule.error ??
     deleteSchedule.error ??
     setScheduleEnabledState.error ??
-    runScheduleNow.error;
+    runScheduleNow.error
 
   return (
     <div className="daemon-layout">
@@ -305,8 +291,8 @@ export function DaemonPage() {
           <form
             className="inline-form"
             onSubmit={(event) => {
-              event.preventDefault();
-              selectSession(sessionDraft);
+              event.preventDefault()
+              selectSession(sessionDraft)
             }}
           >
             <input
@@ -385,8 +371,8 @@ export function DaemonPage() {
         <form
           className="schedule-form"
           onSubmit={(event) => {
-            event.preventDefault();
-            createSchedule.mutate();
+            event.preventDefault()
+            createSchedule.mutate()
           }}
         >
           <label>
@@ -438,8 +424,7 @@ export function DaemonPage() {
                 <strong>{schedule.name}</strong>
                 <code>{schedule.command}</code>
                 <small>
-                  {schedule.sessionName} · {schedule.cron ?? 'manual'} · next{' '}
-                  {formatDate(schedule.nextRunAt)}
+                  {schedule.sessionName} · {schedule.cron ?? 'manual'} · next {formatDate(schedule.nextRunAt)}
                 </small>
               </div>
               <div className="row-actions">
@@ -452,9 +437,7 @@ export function DaemonPage() {
                   <Play size={16} />
                 </button>
                 <button
-                  aria-label={
-                    schedule.enabled ? `Disable ${schedule.name}` : `Enable ${schedule.name}`
-                  }
+                  aria-label={schedule.enabled ? `Disable ${schedule.name}` : `Enable ${schedule.name}`}
                   className="tool-button icon-only"
                   onClick={() =>
                     setScheduleEnabledState.mutate({
@@ -482,5 +465,5 @@ export function DaemonPage() {
 
       {daemonError ? <pre className="error-box">{daemonError.message}</pre> : null}
     </div>
-  );
+  )
 }

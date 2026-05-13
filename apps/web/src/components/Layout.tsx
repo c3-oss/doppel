@@ -1,5 +1,5 @@
-import { Activity } from 'lucide-react';
-import type { PropsWithChildren } from 'react';
+import { Activity } from 'lucide-react'
+import type { PropsWithChildren } from 'react'
 
 export function Layout({ children }: PropsWithChildren) {
   return (
@@ -15,5 +15,5 @@ export function Layout({ children }: PropsWithChildren) {
       </header>
       {children}
     </main>
-  );
+  )
 }

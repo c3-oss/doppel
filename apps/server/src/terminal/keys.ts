@@ -9,10 +9,10 @@ export const terminalKeyMap = {
   down: '\x1b[B',
   right: '\x1b[C',
   left: '\x1b[D',
-} as const;
+} as const
 
-export type TerminalKey = keyof typeof terminalKeyMap;
+export type TerminalKey = keyof typeof terminalKeyMap
 
 export function mapTerminalKey(key: TerminalKey): string {
-  return terminalKeyMap[key];
+  return terminalKeyMap[key]
 }

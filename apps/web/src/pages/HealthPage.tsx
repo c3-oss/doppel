@@ -1,11 +1,11 @@
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw } from 'lucide-react'
 
-import { trpc } from '../trpc.js';
+import { trpc } from '../trpc.js'
 
 export function HealthPage() {
   const health = trpc.health.useQuery(undefined, {
     refetchOnWindowFocus: false,
-  });
+  })
 
   return (
     <section className="status-panel">
@@ -32,5 +32,5 @@ export function HealthPage() {
 
       {health.error ? <pre className="error-box">{health.error.message}</pre> : null}
     </section>
-  );
+  )
 }
