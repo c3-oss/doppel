@@ -19,6 +19,7 @@
     "baseUrl": ".",
     "paths": {
       "@c3-oss/doppel-server": ["../server/src/index.ts"],
+      "@c3-oss/doppel-core": ["../../packages/doppel-core/src/index.ts"],
       "@/*": ["./src/*"]
     }
   },

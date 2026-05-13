@@ -11,17 +11,15 @@ import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify'
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify'
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify'
 
-import { ScheduleScheduler } from '../schedules/scheduler.js'
-import { ScheduleStore } from '../schedules/store.js'
-import type { ServerServices } from '../services.js'
-import { PtySessionManager } from '../terminal/pty-session-manager.js'
+import { type Doppel, createDoppel } from '@c3-oss/doppel-core'
+
 import { type TrpcContext, createAppRouter } from '../trpc/router.js'
 
 export interface CreateServerOptions {
   dataDir?: string
   logger?: boolean
   logFormat?: ServerLogFormat
-  services?: ServerServices
+  doppel?: Doppel
 }
 
 export interface StartServerOptions extends CreateServerOptions {
@@ -61,7 +59,7 @@ const require = createRequire(import.meta.url)
 export type ServerLogFormat = 'json' | 'pretty'
 
 export async function createServer(options: CreateServerOptions = {}): Promise<FastifyInstance> {
-  const services = options.services ?? createServerServices(options)
+  const doppel = options.doppel ?? createDoppel({ dataDir: options.dataDir })
   const app = Fastify({
     logger: createFastifyLoggerOptions(options),
   })
@@ -92,14 +90,14 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
   app.get('/ws/terminal/:sessionName', { websocket: true }, (socket, request) => {
     const params = request.params as { sessionName?: string }
     const sessionName = params.sessionName ?? 'default'
-    const session = services.terminal.ensure({ name: sessionName })
+    const session = doppel.terminal.ensure({ name: sessionName })
 
     sendJson(socket, {
       type: 'status',
       session,
     })
 
-    const history = services.terminal.getHistory(sessionName)
+    const history = doppel.terminal.getHistory(sessionName)
     if (history.length > 0) {
       sendJson(socket, {
         type: 'output',
@@ -107,7 +105,7 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
       })
     }
 
-    const unsubscribe = services.terminal.subscribe(
+    const unsubscribe = doppel.terminal.subscribe(
       sessionName,
       (data) => {
         sendJson(socket, {
@@ -130,7 +128,7 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
       const rows = message?.rows
 
       if (message?.type === 'input' && typeof message.data === 'string') {
-        services.terminal.send(sessionName, message.data)
+        doppel.terminal.send(sessionName, message.data)
         return
       }
 
@@ -143,7 +141,7 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
         cols > 0 &&
         rows > 0
       ) {
-        services.terminal.resize(sessionName, cols, rows)
+        doppel.terminal.resize(sessionName, cols, rows)
       }
     })
 
@@ -157,7 +155,7 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
       router: createAppRouter(),
       createContext: ({ req }: CreateFastifyContextOptions): TrpcContext => ({
         requestId: req.id,
-        services,
+        doppel,
       }),
     },
   })
@@ -178,12 +176,10 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
   })
 
   app.addHook('onClose', async () => {
-    services.schedules.close()
-    services.terminal.close()
-    services.scheduleStore.close()
+    doppel.close()
   })
 
-  services.schedules.start()
+  doppel.schedules.start()
 
   return app
 }
@@ -193,7 +189,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Fas
     dataDir: options.dataDir,
     logFormat: options.logFormat,
     logger: options.logger ?? true,
-    services: options.services,
+    doppel: options.doppel,
   })
   const host = options.host ?? process.env.HOST ?? '0.0.0.0'
   const port = options.port ?? Number(process.env.PORT ?? 3000)
@@ -253,23 +249,6 @@ export async function startWebUiServer(options: StartWebUiServerOptions = {}): P
 
   await app.listen({ host, port })
   return app
-}
-
-export function createServerServices(options: Pick<CreateServerOptions, 'dataDir'> = {}) {
-  const terminal = new PtySessionManager()
-  const scheduleStore = new ScheduleStore({
-    dataDir: options.dataDir,
-  })
-  const schedules = new ScheduleScheduler({
-    store: scheduleStore,
-    terminal,
-  })
-
-  return {
-    terminal,
-    scheduleStore,
-    schedules,
-  }
 }
 
 function resolveWebRoot(webRoot?: string): string | undefined {

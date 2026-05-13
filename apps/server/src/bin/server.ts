@@ -5,8 +5,9 @@ import path from 'node:path'
 
 import { Command } from 'commander'
 
+import { getDefaultDataDir } from '@c3-oss/doppel-core'
+
 import { startServer, startWebUiServer } from '../http/server.js'
-import { getDefaultDataDir } from '../schedules/store.js'
 
 interface ServerCommandOptions {
   daemon?: boolean
