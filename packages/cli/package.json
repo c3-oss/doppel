@@ -41,7 +41,10 @@
     "clean": "rm -rf dist coverage .turbo"
   },
   "dependencies": {
+    "@trpc/client": "^11.7.0",
     "commander": "^12.1.0",
+    "playwright-core": "^1.60.0",
+    "superjson": "^2.2.1",
     "zod": "^3.25.76"
   }
 }
