@@ -22,7 +22,7 @@ export interface BrowserLauncher {
 export type OpenSessionView = (options: ViewOptions) => Promise<void>
 
 export function getSessionViewUrl(serverUrl: string, session: string): string {
-  const url = new URL('/', serverUrl)
+  const url = new URL('/session-view', serverUrl)
   url.searchParams.set('session', session)
   return url.toString()
 }

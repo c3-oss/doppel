@@ -6,7 +6,7 @@ import type { BrowserLauncher } from '../commands/view.js'
 describe('view command helpers', () => {
   it('builds session view URLs', () => {
     expect(getSessionViewUrl('http://localhost:3000/admin', 'default session')).toBe(
-      'http://localhost:3000/?session=default+session',
+      'http://localhost:3000/session-view?session=default+session',
     )
   })
 
@@ -48,6 +48,6 @@ describe('view command helpers', () => {
         headless: false,
       },
     ])
-    expect(visited).toEqual(['http://daemon.test/?session=demo'])
+    expect(visited).toEqual(['http://daemon.test/session-view?session=demo'])
   })
 })
