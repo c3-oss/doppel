@@ -10,7 +10,10 @@ hygiene.
 
 ## Repo Shape
 
-- `apps/server` contains the Fastify HTTP server and tRPC router.
+- `packages/doppel-core` contains the publishable engine (terminal sessions,
+  schedules, persistence) exposed as `@c3-oss/doppel-core`.
+- `apps/server` contains the Fastify HTTP server and tRPC adapter built on
+  top of the engine.
 - `apps/web` contains the Vite React client.
 - `apps/cli` contains the Commander CLI.
 - `.codex/skills` is the canonical skill directory.
@@ -47,5 +50,5 @@ pnpm --filter @c3-oss/doppel-web build
 - Keep server behavior in `apps/server` or shared packages.
 - Keep CLI and web clients thin unless product requirements say otherwise.
 - Do not edit generated output by hand.
-- Keep publishable package manifests accurate for `@c3-oss/doppel` and
-  `@c3-oss/doppel-server`.
+- Keep publishable package manifests accurate for `@c3-oss/doppel-core`,
+  `@c3-oss/doppel-server`, and `@c3-oss/doppel`.

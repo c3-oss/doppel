@@ -2,10 +2,13 @@
 
 ## Project Structure & Module Organization
 
-`doppel` is a Node 22 TypeScript monorepo. Server code lives in `apps/server`,
-web code in `apps/web`, and the CLI in `apps/cli`. Shared package code should
-be added under `packages/*` only when at least two workspaces need it.
-Generated output belongs in `dist/`, `coverage/`, or `.turbo/`.
+`doppel` is a Node 22 TypeScript monorepo. The core engine (terminal sessions,
+schedules, persistence) lives in `packages/doppel-core` and is publishable as
+`@c3-oss/doppel-core`. `apps/server` is the Fastify/tRPC adapter on top of the
+engine, `apps/web` is the administrative React UI, and `apps/cli` is the
+Commander-based client. Any additional shared package belongs under
+`packages/*` only when at least two workspaces need it. Generated output
+belongs in `dist/`, `coverage/`, or `.turbo/`.
 
 ## Build, Test, and Development Commands
 
@@ -31,10 +34,13 @@ convention requires otherwise.
 
 ## Architecture Conventions
 
-The server is the main implementation surface. Keep protocol and domain logic in
-`apps/server` or shared packages; the CLI and web app should call server-facing
-APIs rather than duplicate server behavior. Keep the public server type export
-`AppRouter` stable for tRPC consumers.
+The engine in `packages/doppel-core` owns the domain (terminal sessions,
+schedules, persistence) and is transport-agnostic. `apps/server` is a thin
+Fastify/tRPC adapter that composes the engine via `createDoppel()` and exposes
+it over HTTP/WebSocket. New domain logic belongs in core; the CLI and web app
+should call server-facing APIs rather than duplicate server behavior. Keep the
+public server type export `AppRouter` stable for tRPC consumers, and the public
+core surface (`createDoppel`, `Doppel`, `schemas.*`) stable for embedders.
 
 Keep runtime browser surfaces distinct. `doppel session view` opens the daemon's
 minimal `/session-view` terminal-only page on the daemon/tRPC port. The
@@ -50,9 +56,9 @@ injectable helpers. Web tests are optional until interactive behavior grows, but
 
 ## Commit & Pull Request Guidelines
 
-Use commitlint scopes: `workspace`, `server`, `web`, `cli`, `agents`, `docs`,
-`test`, `deps`, `release`, and `infra`. Keep commits focused and include test
-results in PR descriptions.
+Use commitlint scopes: `workspace`, `server`, `web`, `cli`, `core`, `agents`,
+`docs`, `test`, `deps`, `release`, and `infra`. Keep commits focused and
+include test results in PR descriptions.
 
 When asked to commit, use `.codex/skills/doppel-commits/SKILL.md`. Never make
 exactly one commit for a commit request; split changes into multiple

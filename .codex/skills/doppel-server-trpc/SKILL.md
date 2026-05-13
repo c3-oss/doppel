@@ -8,14 +8,20 @@ description: Server and tRPC workflow for doppel. Use when changing Fastify rout
 ## Start Here
 
 - Read `apps/server/src/index.ts`.
-- Inspect `apps/server/src/http/server.ts` for HTTP wiring.
-- Inspect `apps/server/src/trpc/router.ts` for the public tRPC surface.
+- Inspect `apps/server/src/http/server.ts` for HTTP wiring; it composes the
+  engine via `createDoppel()` from `@c3-oss/doppel-core`.
+- Inspect `apps/server/src/trpc/router.ts` for the public tRPC surface; input
+  schemas come from `@c3-oss/doppel-core` (`schemas.*`) so the engine and the
+  server share a single contract.
 
 ## Rules
 
 - Preserve the exported `AppRouter` type for web and CLI consumers.
-- Add server logic behind procedures or HTTP routes before adding client code.
-- Validate input and output with Zod for public procedures.
+- Domain logic (sessions, schedules, persistence) belongs in
+  `packages/doppel-core`. Procedures must delegate via
+  `requireDoppel(ctx).terminal.*` / `.schedules.*`, not contain inline logic.
+- Validate input and output with Zod for public procedures; reuse the shared
+  schemas in `@c3-oss/doppel-core` rather than redefining domain payloads.
 - Keep tests next to server code as `*.test.ts`.
 - Keep the daemon/tRPC surface separate from the administrative Web UI:
   `/session-view` is a terminal-only daemon page, while `--web-ui` serves
