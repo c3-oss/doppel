@@ -7,7 +7,7 @@ server, a publishable CLI client, and a private React web client.
 
 - `apps/server` - Fastify HTTP server and tRPC router.
 - `apps/web` - Vite React client for browser workflows.
-- `packages/cli` - Commander-based `doppel` command line client.
+- `apps/cli` - Commander-based `doppel` command line client.
 - `.codex/skills` - canonical agent skills for repository work.
 - `.codex/agents` and `.claude/agents` - local specialist agents.
 
