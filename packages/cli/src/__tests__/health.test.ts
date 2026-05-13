@@ -26,4 +26,15 @@ describe('readHealthStatus', () => {
       service: 'doppel-server',
     })
   })
+
+  it('returns offline health when the daemon cannot be reached', async () => {
+    const status = await readHealthStatus('http://localhost:3000', async () => {
+      throw new Error('fetch failed')
+    })
+
+    expect(status).toEqual({
+      ok: false,
+      error: 'Unable to reach doppel server. Start it with `doppel-server start --daemon` or set DOPPEL_SERVER_URL.',
+    })
+  })
 })

@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import { z } from 'zod'
 
+import { formatCliError } from '../errors.js'
 import { writeJson } from '../output.js'
 import { getDefaultServerUrl } from '../trpc-client.js'
 
@@ -10,16 +11,33 @@ const healthSchema = z.object({
 })
 
 export type HealthStatus = z.infer<typeof healthSchema>
+export type OfflineHealthStatus = {
+  ok: false
+  error: string
+}
 
-export async function readHealthStatus(serverUrl: string, fetchImpl: typeof fetch = fetch): Promise<HealthStatus> {
-  const url = new URL('/health', serverUrl)
-  const response = await fetchImpl(url)
+export async function readHealthStatus(
+  serverUrl: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<HealthStatus | OfflineHealthStatus> {
+  try {
+    const url = new URL('/health', serverUrl)
+    const response = await fetchImpl(url)
 
-  if (!response.ok) {
-    throw new Error(`Health check failed with HTTP ${response.status}`)
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: `Health check failed with HTTP ${response.status}`,
+      }
+    }
+
+    return healthSchema.parse(await response.json())
+  } catch (error) {
+    return {
+      ok: false,
+      error: formatCliError(error),
+    }
   }
-
-  return healthSchema.parse(await response.json())
 }
 
 export function healthCommand(): Command {

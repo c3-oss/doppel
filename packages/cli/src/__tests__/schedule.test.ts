@@ -1,6 +1,22 @@
+import { Command } from 'commander'
 import { describe, expect, it } from 'vitest'
 
-import { buildScheduleCreatePayload } from '../commands/schedule.js'
+import { buildScheduleCreatePayload, scheduleCommand } from '../commands/schedule.js'
+import type { DoppelClient } from '../trpc-client.js'
+
+function createStdout() {
+  let output = ''
+
+  return {
+    stdout: {
+      write(chunk: string) {
+        output += chunk
+        return true
+      },
+    } as NodeJS.WriteStream,
+    output: () => output,
+  }
+}
 
 describe('schedule command helpers', () => {
   it('builds create payloads with optional schedule fields', () => {
@@ -57,5 +73,27 @@ describe('schedule command helpers', () => {
         mode: 'command',
       }),
     ).toThrow('Invalid --mode "command". Expected one of: ephemeral, session.')
+  })
+
+  it('prints an empty schedule list when the daemon is offline', async () => {
+    const stdout = createStdout()
+    const client: DoppelClient = {
+      query: async () => {
+        throw new Error('fetch failed')
+      },
+      mutation: async <TOutput = unknown>() => null as TOutput,
+    }
+    const program = new Command().exitOverride()
+
+    program.addCommand(
+      scheduleCommand({
+        clientFactory: () => client,
+        stdout: stdout.stdout,
+      }),
+    )
+
+    await program.parseAsync(['node', 'test', 'schedule', 'list'])
+
+    expect(stdout.output()).toBe('[]\n')
   })
 })

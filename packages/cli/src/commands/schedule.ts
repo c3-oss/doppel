@@ -1,5 +1,6 @@
 import { Command, Option } from 'commander'
 
+import { isDaemonConnectionError } from '../errors.js'
 import { writeJson } from '../output.js'
 import type { DoppelClientFactory } from '../trpc-client.js'
 import { createDoppelClient, getDefaultServerUrl } from '../trpc-client.js'
@@ -83,7 +84,7 @@ export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
     .description('List daemon schedules.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
     .action(async (options: { url: string }) => {
-      const result = await clientFactory(options.url).query('schedules.list')
+      const result = await queryListOrEmpty(clientFactory(options.url), 'schedules.list')
       writeJson(stdout, result)
     })
 
@@ -159,4 +160,16 @@ export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
     })
 
   return command
+}
+
+async function queryListOrEmpty(client: ReturnType<DoppelClientFactory>, path: string): Promise<unknown[]> {
+  try {
+    return await client.query<unknown[]>(path)
+  } catch (error) {
+    if (isDaemonConnectionError(error)) {
+      return []
+    }
+
+    throw error
+  }
 }
