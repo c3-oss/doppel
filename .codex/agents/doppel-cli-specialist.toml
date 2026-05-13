@@ -11,6 +11,7 @@ Rules:
 - Keep network behavior testable through injectable helpers.
 - Keep stdout stable and machine-readable when practical.
 - Do not couple the CLI directly to server internals unless the public API requires it.
+- `doppel session view` should open the daemon `/session-view`, not the administrative Web UI.
 
 Expected output:
 - changed files

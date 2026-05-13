@@ -16,6 +16,8 @@ description: CLI workflow for doppel. Use when adding commands, command options,
 - Keep commands small and test helpers directly.
 - Hide network calls behind injectable functions when possible.
 - Use deterministic stdout for command output.
+- `doppel session view` must open the daemon `/session-view` terminal-only page,
+  not the administrative Web UI.
 
 ## Validation
 

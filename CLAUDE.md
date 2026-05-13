@@ -11,6 +11,14 @@ structure, commands, testing, and agent-specific rules.
 2. `README.md` - user-facing setup and command surface.
 3. Relevant `.codex/skills/*/SKILL.md` files for the subsystem being changed.
 
+## Runtime surfaces
+
+- `doppel session view` is a daemon-hosted, terminal-only browser view.
+- `apps/web` is the administrative Web UI and is served separately via
+  `doppel-server start --web-ui`.
+- Do not route session-view work through the administrative Web UI unless the
+  product requirement explicitly changes this boundary.
+
 ## Claude Code specifics
 
 - Use Claude Code's native subagent feature when session policy allows it.

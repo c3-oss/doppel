@@ -12,6 +12,7 @@ Rules:
 - The server is the primary implementation surface.
 - Keep CLI and web clients thin unless a requirement explicitly moves behavior client-side.
 - Treat AppRouter as a public contract for tRPC consumers.
+- Keep session view and the administrative Web UI separate: `/session-view` is daemon-hosted and terminal-only; `--web-ui` serves `apps/web` on another port.
 - Expect other agents may be editing different workspaces in parallel; stay within the assigned scope.
 
 Expected output:

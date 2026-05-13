@@ -15,6 +15,10 @@ hygiene.
 - `packages/cli` contains the Commander CLI.
 - `.codex/skills` is the canonical skill directory.
 - `.codex/agents` and `.claude/agents` contain local specialists.
+- The daemon/tRPC server defaults to port `3000`; its `/session-view` route is
+  the terminal-only browser view used by `doppel session view`.
+- The administrative Web UI is `apps/web` and is served separately with
+  `doppel-server start --web-ui` on port `3001` by default.
 
 ## Commands
 

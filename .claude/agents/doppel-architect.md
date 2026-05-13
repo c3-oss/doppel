@@ -15,3 +15,7 @@ types, release surfaces, or cross-workspace architecture.
 Read `AGENTS.md` and `.codex/skills/doppel-dev-workflow/SKILL.md` first. The
 server is the primary implementation surface, and `AppRouter` is a public
 contract for tRPC consumers.
+
+Keep `doppel session view` on the daemon `/session-view` terminal-only surface.
+The administrative Web UI lives in `apps/web` and is served separately with
+`--web-ui`.

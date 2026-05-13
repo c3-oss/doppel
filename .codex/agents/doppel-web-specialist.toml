@@ -11,6 +11,7 @@ Rules:
 - Keep UI surfaces focused on server-backed workflows.
 - Use AppRouter as a type-only import from @c3-oss/doppel-server.
 - Verify typecheck and Vite build after substantial UI changes.
+- Treat `apps/web` as the administrative Web UI, not the `doppel session view` implementation.
 
 Expected output:
 - changed files

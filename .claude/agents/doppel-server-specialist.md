@@ -12,3 +12,6 @@ model: sonnet
 Use this agent for work under `apps/server`. Read
 `.codex/skills/doppel-server-trpc/SKILL.md` first, preserve `AppRouter`, and
 validate route/procedure behavior with Vitest.
+
+Keep the daemon `/session-view` terminal-only surface separate from the
+administrative Web UI served by `--web-ui`.

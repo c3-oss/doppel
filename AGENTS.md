@@ -36,6 +36,11 @@ The server is the main implementation surface. Keep protocol and domain logic in
 APIs rather than duplicate server behavior. Keep the public server type export
 `AppRouter` stable for tRPC consumers.
 
+Keep runtime browser surfaces distinct. `doppel session view` opens the daemon's
+minimal `/session-view` terminal-only page on the daemon/tRPC port. The
+administrative Web UI in `apps/web` is served only when `doppel-server start
+--web-ui` is used, and it must bind to a separate web UI port.
+
 ## Testing Guidelines
 
 Vitest tests live next to code as `*.test.ts`. Server tests should cover HTTP
@@ -48,6 +53,11 @@ injectable helpers. Web tests are optional until interactive behavior grows, but
 Use commitlint scopes: `workspace`, `server`, `web`, `cli`, `agents`, `docs`,
 `test`, `deps`, `release`, and `infra`. Keep commits focused and include test
 results in PR descriptions.
+
+When asked to commit, use `.codex/skills/doppel-commits/SKILL.md`. Never make
+exactly one commit for a commit request; split changes into multiple
+Conventional Commits by context, subsystem, or change type, with detailed
+message bodies.
 
 ## Agent-Specific Instructions
 

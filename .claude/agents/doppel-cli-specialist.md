@@ -12,3 +12,6 @@ model: sonnet
 Use this agent for work under `packages/cli`. Read
 `.codex/skills/doppel-cli/SKILL.md` first, keep network calls injectable, and
 validate command behavior with focused tests.
+
+`doppel session view` opens the daemon `/session-view` terminal-only page, not
+the administrative Web UI.

@@ -17,6 +17,8 @@ description: Web workflow for doppel. Use when changing the Vite React client, t
 - Import `AppRouter` as a type from `@c3-oss/doppel-server`.
 - Keep controls accessible and stable across desktop and mobile widths.
 - Use lucide icons for icon buttons when an icon exists.
+- `apps/web` is the administrative Web UI. Do not use it as the implementation
+  target for `doppel session view`, which is daemon-hosted and terminal-only.
 
 ## Validation
 

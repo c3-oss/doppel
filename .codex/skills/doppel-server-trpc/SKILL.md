@@ -17,6 +17,9 @@ description: Server and tRPC workflow for doppel. Use when changing Fastify rout
 - Add server logic behind procedures or HTTP routes before adding client code.
 - Validate input and output with Zod for public procedures.
 - Keep tests next to server code as `*.test.ts`.
+- Keep the daemon/tRPC surface separate from the administrative Web UI:
+  `/session-view` is a terminal-only daemon page, while `--web-ui` serves
+  `apps/web` on a separate port.
 
 ## Validation
 
