@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest'
 
-import { buildScheduleCreatePayload } from '../commands/schedule.js';
+import { buildScheduleCreatePayload } from '../commands/schedule.js'
 
 describe('schedule command helpers', () => {
   it('builds create payloads with optional schedule fields', () => {
@@ -24,8 +24,8 @@ describe('schedule command helpers', () => {
       enabled: false,
       cwd: '/tmp/project',
       shell: '/bin/zsh',
-    });
-  });
+    })
+  })
 
   it('requires core create options', () => {
     expect(() =>
@@ -33,8 +33,8 @@ describe('schedule command helpers', () => {
         name: 'missing-cron',
         command: 'pnpm test',
       }),
-    ).toThrow('Missing required option --cron.');
-  });
+    ).toThrow('Missing required option --cron.')
+  })
 
   it('rejects conflicting enabled flags', () => {
     expect(() =>
@@ -45,6 +45,17 @@ describe('schedule command helpers', () => {
         enabled: true,
         disabled: true,
       }),
-    ).toThrow('Use only one of --enabled or --disabled.');
-  });
-});
+    ).toThrow('Use only one of --enabled or --disabled.')
+  })
+
+  it('rejects invalid schedule modes before calling the server', () => {
+    expect(() =>
+      buildScheduleCreatePayload({
+        name: 'invalid-mode',
+        cron: '* * * * *',
+        command: 'true',
+        mode: 'command',
+      }),
+    ).toThrow('Invalid --mode "command". Expected one of: ephemeral, session.')
+  })
+})
