@@ -69,6 +69,37 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@22.19.19)(jiti@2.6.1)(terser@5.47.1)
 
+  apps/cli:
+    dependencies:
+      '@trpc/client':
+        specifier: ^11.7.0
+        version: 11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3)
+      commander:
+        specifier: ^12.1.0
+        version: 12.1.0
+      playwright-core:
+        specifier: ^1.60.0
+        version: 1.60.0
+      superjson:
+        specifier: ^2.2.1
+        version: 2.2.6
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@c3-oss/config-biome':
+        specifier: ^0.3.1
+        version: 0.3.1(@biomejs/biome@1.9.4)
+      '@c3-oss/config-tsup':
+        specifier: ^0.2.0
+        version: 0.2.0(@swc/core@1.15.33)(jiti@2.6.1)(postcss@8.5.14)(typescript@5.9.3)
+      '@c3-oss/config-typescript':
+        specifier: ^0.1.0
+        version: 0.1.0(typescript@5.9.3)
+      '@c3-oss/config-vitest':
+        specifier: ^0.3.0
+        version: 0.3.0(vitest@3.2.4(@types/node@22.19.19)(jiti@2.6.1)(terser@5.47.1))
+
   apps/server:
     dependencies:
       '@fastify/cors':
@@ -178,37 +209,6 @@ importers:
       vite-tsconfig-paths:
         specifier: ^5.1.4
         version: 5.1.4(typescript@5.9.3)(vite@6.4.2(@types/node@22.19.19)(jiti@2.6.1)(terser@5.47.1))
-
-  packages/cli:
-    dependencies:
-      '@trpc/client':
-        specifier: ^11.7.0
-        version: 11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3)
-      commander:
-        specifier: ^12.1.0
-        version: 12.1.0
-      playwright-core:
-        specifier: ^1.60.0
-        version: 1.60.0
-      superjson:
-        specifier: ^2.2.1
-        version: 2.2.6
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
-    devDependencies:
-      '@c3-oss/config-biome':
-        specifier: ^0.3.1
-        version: 0.3.1(@biomejs/biome@1.9.4)
-      '@c3-oss/config-tsup':
-        specifier: ^0.2.0
-        version: 0.2.0(@swc/core@1.15.33)(jiti@2.6.1)(postcss@8.5.14)(typescript@5.9.3)
-      '@c3-oss/config-typescript':
-        specifier: ^0.1.0
-        version: 0.1.0(typescript@5.9.3)
-      '@c3-oss/config-vitest':
-        specifier: ^0.3.0
-        version: 0.3.0(vitest@3.2.4(@types/node@22.19.19)(jiti@2.6.1)(terser@5.47.1))
 
 packages:
 
