@@ -304,6 +304,9 @@ function renderSessionViewHtml(sessionName?: string): string {
       #terminal {
         width: 100%;
         height: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
+        padding: 8px;
       }
 
       body {
@@ -318,7 +321,6 @@ function renderSessionViewHtml(sessionName?: string): string {
 
       .xterm {
         height: 100%;
-        padding: 8px;
       }
     </style>
   </head>
@@ -344,6 +346,8 @@ function renderSessionViewHtml(sessionName?: string): string {
         }
       });
       const fitAddon = new FitAddon();
+      let terminalCols = 0;
+      let terminalRows = 0;
 
       terminal.loadAddon(fitAddon);
       terminal.open(terminalHost);
@@ -351,6 +355,11 @@ function renderSessionViewHtml(sessionName?: string): string {
 
       const fit = () => {
         fitAddon.fit();
+        if (terminalCols === terminal.cols && terminalRows === terminal.rows) {
+          return;
+        }
+        terminalCols = terminal.cols;
+        terminalRows = terminal.rows;
         if (socket.readyState === WebSocket.OPEN) {
           socket.send(JSON.stringify({
             type: 'resize',
@@ -392,7 +401,7 @@ function renderSessionViewHtml(sessionName?: string): string {
       socket.addEventListener('error', () => terminal.writeln('\\r\\n[session connection error]'));
 
       window.addEventListener('resize', fit);
-      new ResizeObserver(fit).observe(terminalHost);
+      new ResizeObserver(fit).observe(document.body);
       window.setTimeout(fit, 0);
     </script>
   </body>

@@ -62,10 +62,15 @@ function getSessionStatus(session: unknown) {
 }
 
 export function TerminalPanel({ sessionName }: TerminalPanelProps) {
+  const frameRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const socketRef = useRef<WebSocket | null>(null)
+  const terminalSizeRef = useRef({
+    cols: 0,
+    rows: 0,
+  })
   const [connectionState, setConnectionState] = useState<TerminalConnectionState>('connecting')
   const [sessionStatus, setSessionStatus] = useState<string | undefined>()
   const [command, setCommand] = useState('')
@@ -97,11 +102,20 @@ export function TerminalPanel({ sessionName }: TerminalPanelProps) {
     const terminal = terminalRef.current
     const fitAddon = fitAddonRef.current
 
-    if (!terminal || !fitAddon || !containerRef.current) {
+    if (!terminal || !fitAddon || !frameRef.current) {
       return
     }
 
     fitAddon.fit()
+
+    if (terminalSizeRef.current.cols === terminal.cols && terminalSizeRef.current.rows === terminal.rows) {
+      return
+    }
+
+    terminalSizeRef.current = {
+      cols: terminal.cols,
+      rows: terminal.rows,
+    }
     sendSocketMessage({
       type: 'resize',
       cols: terminal.cols,
@@ -153,9 +167,9 @@ export function TerminalPanel({ sessionName }: TerminalPanelProps) {
   }, [fitTerminal, sendInput])
 
   useEffect(() => {
-    const container = containerRef.current
+    const frame = frameRef.current
 
-    if (!container) {
+    if (!frame) {
       return undefined
     }
 
@@ -163,7 +177,7 @@ export function TerminalPanel({ sessionName }: TerminalPanelProps) {
       fitTerminal()
     })
 
-    observer.observe(container)
+    observer.observe(frame)
     window.addEventListener('resize', fitTerminal)
 
     return () => {
@@ -256,7 +270,7 @@ export function TerminalPanel({ sessionName }: TerminalPanelProps) {
         </span>
       </div>
 
-      <div className="terminal-frame">
+      <div className="terminal-frame" ref={frameRef}>
         <div className="terminal-host" ref={containerRef} />
       </div>
 
