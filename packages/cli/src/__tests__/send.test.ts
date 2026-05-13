@@ -68,8 +68,7 @@ describe('send command helpers', () => {
           input,
         })
         return {
-          z: 1,
-          a: true,
+          name: 'work',
         } as TOutput
       },
     }
@@ -105,6 +104,29 @@ describe('send command helpers', () => {
         },
       },
     ])
+    expect(stdout.output()).toBe('sent command to session work\n')
+  })
+
+  it('prints send command results as JSON when requested', async () => {
+    const stdout = createStdout()
+    const client: DoppelClient = {
+      query: async <TOutput = unknown>() => null as TOutput,
+      mutation: async <TOutput = unknown>() =>
+        ({
+          z: 1,
+          a: true,
+        }) as TOutput,
+    }
+    const program = new Command().exitOverride()
+    program.addCommand(
+      sendCommand({
+        clientFactory: () => client,
+        stdout: stdout.stdout,
+      }),
+    )
+
+    await program.parseAsync(['node', 'test', 'send-cmd', 'echo', 'hello', '--json'])
+
     expect(stdout.output()).toBe('{"a":true,"z":1}\n')
   })
 })

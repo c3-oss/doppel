@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 
 import { isDaemonConnectionError } from '../errors.js'
-import { writeJson } from '../output.js'
+import { writeJson, writeTable } from '../output.js'
 import type { DoppelClientFactory } from '../trpc-client.js'
 import { createDoppelClient, getDefaultServerUrl } from '../trpc-client.js'
 import { type OpenSessionView, openSessionViewWithLauncher } from './view.js'
@@ -27,7 +27,21 @@ export interface SessionStartOptions {
   cwd?: string
   cols?: string
   rows?: string
+  json?: boolean
 }
+
+interface SessionSummary {
+  name: string
+  pid: number
+  cols: number
+  rows: number
+  cwd: string
+  shell: string
+  createdAt: string
+  updatedAt: string
+}
+
+const SESSION_COLUMNS = ['name', 'pid', 'size', 'cwd', 'shell', 'updatedAt'] as const
 
 function parsePositiveInteger(value: string | undefined, label: string): number | undefined {
   if (value === undefined) {
@@ -63,9 +77,24 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
     .command('list')
     .description('List daemon sessions.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (options: { url: string }) => {
-      const result = await queryListOrEmpty(clientFactory(options.url), 'sessions.list')
-      writeJson(stdout, result)
+    .option('--json', 'Emit JSON output.')
+    .action(async (options: { json?: boolean; url: string }) => {
+      const result = await queryListOrEmpty<SessionSummary>(clientFactory(options.url), 'sessions.list')
+
+      if (options.json === true) {
+        writeJson(stdout, result)
+        return
+      }
+
+      writeTable(stdout, result.map(toSessionRow), {
+        columns: SESSION_COLUMNS,
+        maxColumnWidths: {
+          cwd: 40,
+          shell: 28,
+          updatedAt: 24,
+        },
+        tailColumns: new Set(['cwd', 'shell']),
+      })
     })
 
   command
@@ -77,6 +106,7 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
     .option('--cols <cols>', 'Terminal column count.')
     .option('--rows <rows>', 'Terminal row count.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
+    .option('--json', 'Emit JSON output.')
     .action(
       async (
         name: string,
@@ -85,8 +115,22 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
         },
       ) => {
         const payload = buildSessionEnsurePayload(name, options)
-        const result = await clientFactory(options.url).mutation('sessions.ensure', payload)
-        writeJson(stdout, result)
+        const result = await clientFactory(options.url).mutation<SessionSummary>('sessions.ensure', payload)
+
+        if (options.json === true) {
+          writeJson(stdout, result)
+          return
+        }
+
+        writeTable(stdout, [toSessionRow(result)], {
+          columns: SESSION_COLUMNS,
+          maxColumnWidths: {
+            cwd: 40,
+            shell: 28,
+            updatedAt: 24,
+          },
+          tailColumns: new Set(['cwd', 'shell']),
+        })
       },
     )
 
@@ -95,9 +139,16 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
     .description('Kill a daemon session.')
     .argument('[name]', 'Session name.', 'default')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (name: string, options: { url: string }) => {
-      const result = await clientFactory(options.url).mutation('sessions.kill', { name })
-      writeJson(stdout, result)
+    .option('--json', 'Emit JSON output.')
+    .action(async (name: string, options: { json?: boolean; url: string }) => {
+      const result = await clientFactory(options.url).mutation<{ killed: boolean }>('sessions.kill', { name })
+
+      if (options.json === true) {
+        writeJson(stdout, result)
+        return
+      }
+
+      stdout.write(result.killed ? `killed session ${name}\n` : `session not found: ${name}\n`)
     })
 
   command
@@ -128,14 +179,25 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
   return command
 }
 
-async function queryListOrEmpty(client: ReturnType<DoppelClientFactory>, path: string): Promise<unknown[]> {
+async function queryListOrEmpty<T>(client: ReturnType<DoppelClientFactory>, path: string): Promise<T[]> {
   try {
-    return await client.query<unknown[]>(path)
+    return await client.query<T[]>(path)
   } catch (error) {
     if (isDaemonConnectionError(error)) {
       return []
     }
 
     throw error
+  }
+}
+
+function toSessionRow(session: SessionSummary): Record<(typeof SESSION_COLUMNS)[number], string | number> {
+  return {
+    name: session.name,
+    pid: session.pid,
+    size: `${session.cols}x${session.rows}`,
+    cwd: session.cwd,
+    shell: session.shell,
+    updatedAt: session.updatedAt,
   }
 }

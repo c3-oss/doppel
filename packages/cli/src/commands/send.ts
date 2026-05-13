@@ -21,15 +21,21 @@ export interface SendCommandOptions {
   session?: string
   enter?: boolean
   raw?: boolean
+  json?: boolean
 }
 
 export interface SendKeyOptions {
   session?: string
+  json?: boolean
 }
 
 export interface SendCommandDeps {
   clientFactory?: DoppelClientFactory
   stdout?: NodeJS.WriteStream
+}
+
+interface SessionSummary {
+  name: string
 }
 
 function decodeRawText(value: string): string {
@@ -87,6 +93,7 @@ export function sendCommand(deps: SendCommandDeps = {}): Command {
     .option('--no-enter', 'Do not press Enter after sending text.')
     .option('--raw', 'Decode backslash escapes before sending text.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
+    .option('--json', 'Emit JSON output.')
     .action(
       async (
         text: string[],
@@ -95,8 +102,14 @@ export function sendCommand(deps: SendCommandDeps = {}): Command {
         },
       ) => {
         const payload = buildSendCommandPayload(text, options)
-        const result = await clientFactory(options.url).mutation('sessions.send', payload)
-        writeJson(stdout, result)
+        const result = await clientFactory(options.url).mutation<SessionSummary>('sessions.send', payload)
+
+        if (options.json === true) {
+          writeJson(stdout, result)
+          return
+        }
+
+        stdout.write(`sent command to session ${result.name}\n`)
       },
     )
 }
@@ -110,6 +123,7 @@ export function sendKeyCommand(deps: SendCommandDeps = {}): Command {
     .argument('<key>', 'Key to send.')
     .option('-s, --session <name>', 'Session name.', 'default')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
+    .option('--json', 'Emit JSON output.')
     .action(
       async (
         key: string,
@@ -118,8 +132,14 @@ export function sendKeyCommand(deps: SendCommandDeps = {}): Command {
         },
       ) => {
         const payload = buildSendKeyPayload(key, options)
-        const result = await clientFactory(options.url).mutation('sessions.sendKey', payload)
-        writeJson(stdout, result)
+        const result = await clientFactory(options.url).mutation<SessionSummary>('sessions.sendKey', payload)
+
+        if (options.json === true) {
+          writeJson(stdout, result)
+          return
+        }
+
+        stdout.write(`sent key ${payload.key} to session ${result.name}\n`)
       },
     )
 }

@@ -75,7 +75,7 @@ describe('schedule command helpers', () => {
     ).toThrow('Invalid --mode "command". Expected one of: ephemeral, session.')
   })
 
-  it('prints an empty schedule list when the daemon is offline', async () => {
+  it('prints an empty schedule table when the daemon is offline', async () => {
     const stdout = createStdout()
     const client: DoppelClient = {
       query: async () => {
@@ -93,6 +93,31 @@ describe('schedule command helpers', () => {
     )
 
     await program.parseAsync(['node', 'test', 'schedule', 'list'])
+
+    expect(stdout.output()).toBe(
+      'id  name  enabled  cron  mode  sessionName  lastStatus  command\n' +
+        '--  ----  -------  ----  ----  -----------  ----------  -------\n',
+    )
+  })
+
+  it('prints an empty schedule list as JSON when requested', async () => {
+    const stdout = createStdout()
+    const client: DoppelClient = {
+      query: async () => {
+        throw new Error('fetch failed')
+      },
+      mutation: async <TOutput = unknown>() => null as TOutput,
+    }
+    const program = new Command().exitOverride()
+
+    program.addCommand(
+      scheduleCommand({
+        clientFactory: () => client,
+        stdout: stdout.stdout,
+      }),
+    )
+
+    await program.parseAsync(['node', 'test', 'schedule', 'list', '--json'])
 
     expect(stdout.output()).toBe('[]\n')
   })

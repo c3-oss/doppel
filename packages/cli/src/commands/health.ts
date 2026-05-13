@@ -44,8 +44,20 @@ export function healthCommand(): Command {
   return new Command('health')
     .description('Check a running doppel server.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (options: { url: string }) => {
+    .option('--json', 'Emit JSON output.')
+    .action(async (options: { json?: boolean; url: string }) => {
       const status = await readHealthStatus(options.url)
-      writeJson(process.stdout, status)
+
+      if (options.json === true) {
+        writeJson(process.stdout, status)
+        return
+      }
+
+      if (status.ok) {
+        process.stdout.write(`doppel server is healthy (${status.service})\n`)
+        return
+      }
+
+      process.stdout.write(`doppel server is offline: ${status.error}\n`)
     })
 }

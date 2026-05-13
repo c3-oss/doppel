@@ -1,7 +1,7 @@
 import { Command, Option } from 'commander'
 
 import { isDaemonConnectionError } from '../errors.js'
-import { writeJson } from '../output.js'
+import { writeJson, writeTable } from '../output.js'
 import type { DoppelClientFactory } from '../trpc-client.js'
 import { createDoppelClient, getDefaultServerUrl } from '../trpc-client.js'
 
@@ -26,6 +26,7 @@ export interface ScheduleCreateOptions {
   disabled?: boolean
   cwd?: string
   shell?: string
+  json?: boolean
 }
 
 export interface ScheduleCommandDeps {
@@ -36,6 +37,26 @@ export interface ScheduleCommandDeps {
 const SCHEDULE_MODES = ['ephemeral', 'session'] as const
 
 type ScheduleMode = (typeof SCHEDULE_MODES)[number]
+
+interface ScheduleRecord {
+  id: string
+  name: string
+  cron: string
+  command: string
+  mode: ScheduleMode
+  sessionName: string | null
+  enabled: boolean
+  cwd: string | null
+  shell: string | null
+  createdAt: string
+  updatedAt: string
+  lastRunAt: string | null
+  lastStatus: string | null
+  lastExitCode: number | null
+  lastOutput: string | null
+}
+
+const SCHEDULE_COLUMNS = ['id', 'name', 'enabled', 'cron', 'mode', 'sessionName', 'lastStatus', 'command'] as const
 
 function requireOption(value: string | undefined, label: string): string {
   if (value === undefined || value.length === 0) {
@@ -83,9 +104,24 @@ export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
     .command('list')
     .description('List daemon schedules.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (options: { url: string }) => {
-      const result = await queryListOrEmpty(clientFactory(options.url), 'schedules.list')
-      writeJson(stdout, result)
+    .option('--json', 'Emit JSON output.')
+    .action(async (options: { json?: boolean; url: string }) => {
+      const result = await queryListOrEmpty<ScheduleRecord>(clientFactory(options.url), 'schedules.list')
+
+      if (options.json === true) {
+        writeJson(stdout, result)
+        return
+      }
+
+      writeTable(stdout, result.map(toScheduleRow), {
+        columns: SCHEDULE_COLUMNS,
+        maxColumnWidths: {
+          id: 12,
+          command: 42,
+          lastStatus: 14,
+          name: 24,
+        },
+      })
     })
 
   command
@@ -101,6 +137,7 @@ export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
     .option('--cwd <cwd>', 'Working directory for the schedule command.')
     .option('--shell <shell>', 'Shell command for the schedule command.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
+    .option('--json', 'Emit JSON output.')
     .action(
       async (
         options: ScheduleCreateOptions & {
@@ -108,8 +145,22 @@ export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
         },
       ) => {
         const payload = buildScheduleCreatePayload(options)
-        const result = await clientFactory(options.url).mutation('schedules.create', payload)
-        writeJson(stdout, result)
+        const result = await clientFactory(options.url).mutation<ScheduleRecord>('schedules.create', payload)
+
+        if (options.json === true) {
+          writeJson(stdout, result)
+          return
+        }
+
+        writeTable(stdout, [toScheduleRow(result)], {
+          columns: SCHEDULE_COLUMNS,
+          maxColumnWidths: {
+            id: 12,
+            command: 42,
+            lastStatus: 14,
+            name: 24,
+          },
+        })
       },
     )
 
@@ -118,9 +169,16 @@ export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
     .description('Remove a daemon schedule.')
     .argument('<id>', 'Schedule ID.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (id: string, options: { url: string }) => {
-      const result = await clientFactory(options.url).mutation('schedules.delete', { id })
-      writeJson(stdout, result)
+    .option('--json', 'Emit JSON output.')
+    .action(async (id: string, options: { json?: boolean; url: string }) => {
+      const result = await clientFactory(options.url).mutation<{ deleted: boolean }>('schedules.delete', { id })
+
+      if (options.json === true) {
+        writeJson(stdout, result)
+        return
+      }
+
+      stdout.write(result.deleted ? `removed schedule ${id}\n` : `schedule not found: ${id}\n`)
     })
 
   command
@@ -128,12 +186,27 @@ export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
     .description('Enable a daemon schedule.')
     .argument('<id>', 'Schedule ID.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (id: string, options: { url: string }) => {
-      const result = await clientFactory(options.url).mutation('schedules.enable', {
+    .option('--json', 'Emit JSON output.')
+    .action(async (id: string, options: { json?: boolean; url: string }) => {
+      const result = await clientFactory(options.url).mutation<ScheduleRecord>('schedules.enable', {
         id,
         enabled: true,
       })
-      writeJson(stdout, result)
+
+      if (options.json === true) {
+        writeJson(stdout, result)
+        return
+      }
+
+      writeTable(stdout, [toScheduleRow(result)], {
+        columns: SCHEDULE_COLUMNS,
+        maxColumnWidths: {
+          id: 12,
+          command: 42,
+          lastStatus: 14,
+          name: 24,
+        },
+      })
     })
 
   command
@@ -141,12 +214,27 @@ export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
     .description('Disable a daemon schedule.')
     .argument('<id>', 'Schedule ID.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (id: string, options: { url: string }) => {
-      const result = await clientFactory(options.url).mutation('schedules.enable', {
+    .option('--json', 'Emit JSON output.')
+    .action(async (id: string, options: { json?: boolean; url: string }) => {
+      const result = await clientFactory(options.url).mutation<ScheduleRecord>('schedules.enable', {
         id,
         enabled: false,
       })
-      writeJson(stdout, result)
+
+      if (options.json === true) {
+        writeJson(stdout, result)
+        return
+      }
+
+      writeTable(stdout, [toScheduleRow(result)], {
+        columns: SCHEDULE_COLUMNS,
+        maxColumnWidths: {
+          id: 12,
+          command: 42,
+          lastStatus: 14,
+          name: 24,
+        },
+      })
     })
 
   command
@@ -154,22 +242,50 @@ export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
     .description('Run a daemon schedule now.')
     .argument('<id>', 'Schedule ID.')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (id: string, options: { url: string }) => {
-      const result = await clientFactory(options.url).mutation('schedules.runNow', { id })
-      writeJson(stdout, result)
+    .option('--json', 'Emit JSON output.')
+    .action(async (id: string, options: { json?: boolean; url: string }) => {
+      const result = await clientFactory(options.url).mutation<ScheduleRecord>('schedules.runNow', { id })
+
+      if (options.json === true) {
+        writeJson(stdout, result)
+        return
+      }
+
+      writeTable(stdout, [toScheduleRow(result)], {
+        columns: SCHEDULE_COLUMNS,
+        maxColumnWidths: {
+          id: 12,
+          command: 42,
+          lastStatus: 14,
+          name: 24,
+        },
+      })
     })
 
   return command
 }
 
-async function queryListOrEmpty(client: ReturnType<DoppelClientFactory>, path: string): Promise<unknown[]> {
+async function queryListOrEmpty<T>(client: ReturnType<DoppelClientFactory>, path: string): Promise<T[]> {
   try {
-    return await client.query<unknown[]>(path)
+    return await client.query<T[]>(path)
   } catch (error) {
     if (isDaemonConnectionError(error)) {
       return []
     }
 
     throw error
+  }
+}
+
+function toScheduleRow(schedule: ScheduleRecord): Record<(typeof SCHEDULE_COLUMNS)[number], string> {
+  return {
+    id: schedule.id,
+    name: schedule.name,
+    enabled: schedule.enabled ? 'yes' : 'no',
+    cron: schedule.cron,
+    mode: schedule.mode,
+    sessionName: schedule.sessionName ?? '',
+    lastStatus: schedule.lastStatus ?? '',
+    command: schedule.command,
   }
 }
