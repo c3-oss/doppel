@@ -5,7 +5,9 @@ server, a publishable CLI client, and a private React web client.
 
 ## Layout
 
-- `apps/server` - Fastify HTTP server and tRPC router.
+- `packages/doppel-core` - publishable engine (sessions, schedules,
+  persistence). Embed via `createDoppel()` from `@c3-oss/doppel-core`.
+- `apps/server` - Fastify HTTP server and tRPC adapter over the engine.
 - `apps/web` - Vite React client for browser workflows.
 - `apps/cli` - Commander-based `doppel` command line client.
 - `.codex/skills` - canonical agent skills for repository work.
