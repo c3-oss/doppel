@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import '@xterm/xterm/css/xterm.css'
 
+import { getDoppelServerUrl } from '../config.js'
+
 type TerminalPanelProps = {
   sessionName: string
 }
@@ -27,8 +29,7 @@ type TerminalMessage =
     }
 
 function getTerminalWebSocketUrl(sessionName: string) {
-  const configuredServerUrl = import.meta.env.VITE_DOPPEL_SERVER_URL
-  const baseUrl = new URL(configuredServerUrl ?? window.location.origin)
+  const baseUrl = new URL(getDoppelServerUrl())
   const websocketUrl = new URL(`/ws/terminal/${encodeURIComponent(sessionName)}`, baseUrl)
 
   websocketUrl.protocol = baseUrl.protocol === 'https:' ? 'wss:' : 'ws:'

@@ -7,3 +7,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+interface Window {
+  readonly __DOPPEL_CONFIG__?: {
+    readonly serverUrl?: string
+  }
+}

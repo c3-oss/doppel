@@ -2,12 +2,13 @@ import { QueryClient } from '@tanstack/react-query'
 import { getUntypedClient, httpBatchLink } from '@trpc/client'
 import superjson from 'superjson'
 
+import { getDoppelServerUrl } from '../config.js'
 import { trpc } from '../trpc.js'
 
 export const queryClient = new QueryClient()
 
 export function createDoppelTrpcClient() {
-  const serverUrl = import.meta.env.VITE_DOPPEL_SERVER_URL ?? 'http://localhost:3000'
+  const serverUrl = getDoppelServerUrl()
 
   return trpc.createClient({
     links: [
