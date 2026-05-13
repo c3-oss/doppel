@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/main/.schema/devbox.schema.json",
+  "packages": [
+    "nodejs@22",
+    "pnpm@10",
+    "jq@1",
+    "ripgrep@14",
+    "just@1.50.0",
+    "gitleaks@8"
+  ],
+  "env": {
+    "DEVBOX_COREPACK_ENABLED": "true"
+  },
+  "shell": {
+    "scripts": {
+      "build": ["pnpm build"],
+      "test": ["pnpm test"],
+      "lint": ["pnpm lint"],
+      "typecheck": ["pnpm typecheck"]
+    }
+  }
+}

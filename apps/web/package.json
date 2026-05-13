@@ -1,0 +1,33 @@
+{
+  "name": "@c3-oss/doppel-web",
+  "version": "0.1.0",
+  "description": "Doppel web client.",
+  "author": "Caian Ertl <hi@caian.org>",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests",
+    "lint": "biome check .",
+    "lint:fix": "biome check --fix .",
+    "clean": "rm -rf dist coverage .turbo"
+  },
+  "dependencies": {
+    "@c3-oss/doppel-server": "workspace:^",
+    "@tanstack/react-query": "^5.90.5",
+    "@trpc/client": "^11.7.0",
+    "@trpc/react-query": "^11.7.0",
+    "lucide-react": "^0.548.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "superjson": "^2.2.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.2.2",
+    "vite-tsconfig-paths": "^5.1.4"
+  }
+}

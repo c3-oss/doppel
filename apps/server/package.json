@@ -1,0 +1,51 @@
+{
+  "name": "@c3-oss/doppel-server",
+  "version": "0.1.0",
+  "description": "Doppel HTTP and tRPC server.",
+  "author": "Caian Ertl <hi@caian.org>",
+  "license": "MIT",
+  "type": "module",
+  "homepage": "https://github.com/c3-oss/doppel#readme",
+  "bugs": {
+    "url": "https://github.com/c3-oss/doppel/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/c3-oss/doppel.git",
+    "directory": "apps/server"
+  },
+  "files": ["dist"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "doppel-server": "./dist/bin/server.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "dev": "node --import @swc-node/register/esm-register src/bin/server.ts",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --fix .",
+    "clean": "rm -rf dist coverage .turbo"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@fastify/helmet": "^13.0.0",
+    "@trpc/server": "^11.7.0",
+    "fastify": "^5.0.0",
+    "superjson": "^2.2.1",
+    "zod": "^3.25.76"
+  }
+}

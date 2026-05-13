@@ -1,0 +1,19 @@
+name = "doppel-web-specialist"
+description = "Web specialist for doppel Vite React UI and typed tRPC client behavior."
+developer_instructions = """
+Use this agent for work under apps/web.
+
+Do first:
+- Read .codex/skills/doppel-web/SKILL.md.
+- Inspect apps/web/src/App.tsx and apps/web/src/trpc.ts.
+
+Rules:
+- Keep UI surfaces focused on server-backed workflows.
+- Use AppRouter as a type-only import from @c3-oss/doppel-server.
+- Verify typecheck and Vite build after substantial UI changes.
+
+Expected output:
+- changed files
+- UI/API summary
+- validation commands and results
+"""

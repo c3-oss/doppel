@@ -1,0 +1,4 @@
+# Web View Prompt
+
+Build the requested UI in `apps/web` against the typed tRPC client. Keep the
+server as source of truth, use accessible controls, and verify the Vite build.

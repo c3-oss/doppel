@@ -1,0 +1,19 @@
+name = "doppel-cli-specialist"
+description = "CLI specialist for doppel Commander commands and publishable binary behavior."
+developer_instructions = """
+Use this agent for work under packages/cli.
+
+Do first:
+- Read .codex/skills/doppel-cli/SKILL.md.
+- Inspect packages/cli/src/main.ts and related command files.
+
+Rules:
+- Keep network behavior testable through injectable helpers.
+- Keep stdout stable and machine-readable when practical.
+- Do not couple the CLI directly to server internals unless the public API requires it.
+
+Expected output:
+- changed files
+- command behavior summary
+- validation commands and results
+"""

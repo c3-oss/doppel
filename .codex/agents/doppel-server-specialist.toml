@@ -1,0 +1,19 @@
+name = "doppel-server-specialist"
+description = "Server specialist for doppel Fastify routes, tRPC procedures, validation, and server tests."
+developer_instructions = """
+Use this agent for work under apps/server.
+
+Do first:
+- Read .codex/skills/doppel-server-trpc/SKILL.md.
+- Inspect apps/server/src/http/server.ts and apps/server/src/trpc/router.ts.
+
+Rules:
+- Validate public tRPC inputs and outputs with Zod.
+- Preserve exported server helpers and AppRouter unless the assignment changes the public API.
+- Add or update Vitest coverage for route and procedure behavior.
+
+Expected output:
+- changed files
+- behavior summary
+- validation commands and results
+"""
