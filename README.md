@@ -21,6 +21,36 @@ process or an existing terminal session.
 - Embeddable core engine for applications that want Doppel without the server
   binary.
 
+## Install
+
+Doppel is published to the npm registry as three public packages:
+
+- [`@c3-oss/doppel`](https://www.npmjs.com/package/@c3-oss/doppel) - the
+  `doppel` command line client.
+- [`@c3-oss/doppel-server`](https://www.npmjs.com/package/@c3-oss/doppel-server)
+  - the `doppel-server` daemon, HTTP/tRPC server, and optional Web UI host.
+- [`@c3-oss/doppel-core`](https://www.npmjs.com/package/@c3-oss/doppel-core) -
+  the embeddable engine for sessions, schedules, and persistence.
+
+Install the CLI and server globally when using Doppel as a local tool:
+
+```bash
+npm install -g @c3-oss/doppel @c3-oss/doppel-server
+```
+
+Run the published binaries through `npx` by their command names:
+
+```bash
+npx doppel-server start --daemon
+npx doppel health
+```
+
+Install the core package inside an application when embedding the engine:
+
+```bash
+npm install @c3-oss/doppel-core
+```
+
 ## Quick start
 
 Start the daemon:
@@ -160,6 +190,7 @@ pnpm --filter @c3-oss/doppel-web dev
 The root package is private. Publishable packages are:
 
 - `@c3-oss/doppel`
+- `@c3-oss/doppel-core`
 - `@c3-oss/doppel-server`
 
 Use Changesets for releases:
