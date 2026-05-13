@@ -1,6 +1,6 @@
 {
   "name": "@c3-oss/doppel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Doppel command line client.",
   "author": "Caian Ertl <hi@caian.org>",
   "license": "MIT",
@@ -14,7 +14,9 @@
     "url": "git+https://github.com/c3-oss/doppel.git",
     "directory": "apps/cli"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
