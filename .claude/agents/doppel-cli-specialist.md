@@ -9,7 +9,7 @@ model: sonnet
 
 # Doppel CLI Specialist
 
-Use this agent for work under `packages/cli`. Read
+Use this agent for work under `apps/cli`. Read
 `.codex/skills/doppel-cli/SKILL.md` first, keep network calls injectable, and
 validate command behavior with focused tests.
 

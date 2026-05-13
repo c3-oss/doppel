@@ -12,7 +12,7 @@ hygiene.
 
 - `apps/server` contains the Fastify HTTP server and tRPC router.
 - `apps/web` contains the Vite React client.
-- `packages/cli` contains the Commander CLI.
+- `apps/cli` contains the Commander CLI.
 - `.codex/skills` is the canonical skill directory.
 - `.codex/agents` and `.claude/agents` contain local specialists.
 - The daemon/tRPC server defaults to port `3000`; its `/session-view` route is

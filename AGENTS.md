@@ -3,8 +3,8 @@
 ## Project Structure & Module Organization
 
 `doppel` is a Node 22 TypeScript monorepo. Server code lives in `apps/server`,
-web code in `apps/web`, and the CLI in `packages/cli`. Shared package code
-should be added under `packages/*` only when at least two workspaces need it.
+web code in `apps/web`, and the CLI in `apps/cli`. Shared package code should
+be added under `packages/*` only when at least two workspaces need it.
 Generated output belongs in `dist/`, `coverage/`, or `.turbo/`.
 
 ## Build, Test, and Development Commands

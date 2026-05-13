@@ -7,9 +7,9 @@ description: CLI workflow for doppel. Use when adding commands, command options,
 
 ## Start Here
 
-- `packages/cli/src/main.ts` wires the command tree.
-- `packages/cli/src/commands/` contains command implementations.
-- `packages/cli/src/bin/doppel.ts` is the executable entrypoint.
+- `apps/cli/src/main.ts` wires the command tree.
+- `apps/cli/src/commands/` contains command implementations.
+- `apps/cli/src/bin/doppel.ts` is the executable entrypoint.
 
 ## Rules
 
