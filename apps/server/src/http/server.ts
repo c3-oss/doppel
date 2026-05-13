@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -20,13 +21,40 @@ export interface CreateServerOptions {
   dataDir?: string
   logger?: boolean
   services?: ServerServices
-  webRoot?: string
 }
 
 export interface StartServerOptions extends CreateServerOptions {
   host?: string
   port?: number
 }
+
+export interface CreateWebUiServerOptions {
+  daemonUrl?: string
+  logger?: boolean
+  webRoot?: string
+}
+
+export interface StartWebUiServerOptions extends CreateWebUiServerOptions {
+  host?: string
+  port?: number
+}
+
+const SESSION_VIEW_ASSETS = {
+  '/session-view/assets/xterm.css': {
+    contentType: 'text/css; charset=utf-8',
+    packagePath: '@xterm/xterm/css/xterm.css',
+  },
+  '/session-view/assets/xterm.mjs': {
+    contentType: 'text/javascript; charset=utf-8',
+    packagePath: '@xterm/xterm/lib/xterm.mjs',
+  },
+  '/session-view/assets/addon-fit.mjs': {
+    contentType: 'text/javascript; charset=utf-8',
+    packagePath: '@xterm/addon-fit/lib/addon-fit.mjs',
+  },
+} as const
+
+const require = createRequire(import.meta.url)
 
 export async function createServer(options: CreateServerOptions = {}): Promise<FastifyInstance> {
   const services = options.services ?? createServerServices(options)
@@ -37,7 +65,18 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
   await app.register(cors, {
     origin: true,
   })
-  await app.register(helmet)
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        connectSrc: ["'self'", 'ws:', 'wss:'],
+        defaultSrc: ["'self'"],
+        fontSrc: ["'self'", 'data:'],
+        imgSrc: ["'self'", 'data:'],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+  })
 
   app.get('/health', async () => ({
     ok: true,
@@ -119,27 +158,20 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
     },
   })
 
-  const webRoot = resolveWebRoot(options.webRoot)
-  if (webRoot) {
-    await app.register(fastifyStatic, {
-      root: webRoot,
-      prefix: '/',
-    })
-  } else {
-    app.get('/', async (_, reply) => {
-      return reply
-        .code(500)
-        .type('text/html')
-        .send(`<!doctype html>
-<html>
-  <head><title>Doppel</title></head>
-  <body>
-    <h1>Doppel web UI assets are missing</h1>
-    <p>Run pnpm build before starting the packaged server.</p>
-  </body>
-</html>`)
+  app.get('/session-view', async (request, reply) => {
+    const query = request.query as { session?: string }
+    return reply.type('text/html; charset=utf-8').send(renderSessionViewHtml(query.session))
+  })
+
+  for (const [assetPath, asset] of Object.entries(SESSION_VIEW_ASSETS)) {
+    app.get(assetPath, async (_, reply) => {
+      return reply.type(asset.contentType).send(fs.createReadStream(require.resolve(asset.packagePath)))
     })
   }
+
+  app.get('/', async (_, reply) => {
+    return reply.type('text/plain; charset=utf-8').send('doppel daemon is running\n')
+  })
 
   app.addHook('onClose', async () => {
     services.schedules.close()
@@ -157,10 +189,61 @@ export async function startServer(options: StartServerOptions = {}): Promise<Fas
     dataDir: options.dataDir,
     logger: options.logger ?? true,
     services: options.services,
-    webRoot: options.webRoot,
   })
   const host = options.host ?? process.env.HOST ?? '0.0.0.0'
   const port = options.port ?? Number(process.env.PORT ?? 3000)
+
+  await app.listen({ host, port })
+  return app
+}
+
+export async function createWebUiServer(options: CreateWebUiServerOptions = {}): Promise<FastifyInstance> {
+  const app = Fastify({
+    logger: options.logger ?? false,
+  })
+  const daemonUrl = options.daemonUrl ?? 'http://localhost:3000'
+  const webRoot = resolveWebRoot(options.webRoot)
+
+  app.get('/doppel-config.js', async (_, reply) => {
+    return reply.type('text/javascript; charset=utf-8').send(
+      `window.__DOPPEL_CONFIG__ = ${JSON.stringify({
+        serverUrl: daemonUrl,
+      })};\n`,
+    )
+  })
+
+  if (webRoot) {
+    await app.register(fastifyStatic, {
+      root: webRoot,
+      prefix: '/',
+    })
+  } else {
+    app.get('/', async (_, reply) => {
+      return reply
+        .code(500)
+        .type('text/html; charset=utf-8')
+        .send(`<!doctype html>
+<html>
+  <head><title>Doppel</title></head>
+  <body>
+    <h1>Doppel web UI assets are missing</h1>
+    <p>Run pnpm build before starting the packaged server.</p>
+  </body>
+</html>`)
+    })
+  }
+
+  return app
+}
+
+export async function startWebUiServer(options: StartWebUiServerOptions = {}): Promise<FastifyInstance> {
+  const app = await createWebUiServer({
+    daemonUrl: options.daemonUrl,
+    logger: options.logger ?? true,
+    webRoot: options.webRoot,
+  })
+  const host = options.host ?? process.env.HOST ?? '0.0.0.0'
+  const port = options.port ?? Number(process.env.WEB_UI_PORT ?? 3001)
 
   await app.listen({ host, port })
   return app
@@ -202,6 +285,118 @@ function resolveWebRoot(webRoot?: string): string | undefined {
   }
 
   return undefined
+}
+
+function renderSessionViewHtml(sessionName?: string): string {
+  const normalizedSessionName = sessionName?.trim() || 'default'
+  const serializedSessionName = JSON.stringify(normalizedSessionName)
+
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Doppel Session</title>
+    <link rel="stylesheet" href="/session-view/assets/xterm.css">
+    <style>
+      html,
+      body,
+      #terminal {
+        width: 100%;
+        height: 100%;
+      }
+
+      body {
+        overflow: hidden;
+        margin: 0;
+        background: #000;
+      }
+
+      #terminal {
+        background: #000;
+      }
+
+      .xterm {
+        height: 100%;
+        padding: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="terminal"></div>
+    <script type="module">
+      import { Terminal } from '/session-view/assets/xterm.mjs';
+      import { FitAddon } from '/session-view/assets/addon-fit.mjs';
+
+      const sessionName = ${serializedSessionName};
+      const terminalHost = document.getElementById('terminal');
+      const terminal = new Terminal({
+        cursorBlink: true,
+        convertEol: true,
+        fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
+        fontSize: 13,
+        scrollback: 10000,
+        theme: {
+          background: '#000000',
+          foreground: '#f8fafc',
+          cursor: '#f8fafc',
+          selectionBackground: '#334155'
+        }
+      });
+      const fitAddon = new FitAddon();
+
+      terminal.loadAddon(fitAddon);
+      terminal.open(terminalHost);
+      terminal.focus();
+
+      const fit = () => {
+        fitAddon.fit();
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'resize',
+            cols: terminal.cols,
+            rows: terminal.rows
+          }));
+        }
+      };
+      const baseUrl = new URL(window.location.href);
+      const websocketUrl = new URL('/ws/terminal/' + encodeURIComponent(sessionName), baseUrl);
+      websocketUrl.protocol = baseUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+      const socket = new WebSocket(websocketUrl);
+
+      terminal.onData((data) => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'input',
+            data
+          }));
+        }
+      });
+
+      socket.addEventListener('open', fit);
+      socket.addEventListener('message', (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'output') {
+            terminal.write(String(message.data ?? ''));
+          } else if (message.type === 'exit') {
+            const exitCode = typeof message.exitCode === 'number' ? String(message.exitCode) : 'unknown';
+            const signal = typeof message.signal === 'string' ? ' (' + message.signal + ')' : '';
+            terminal.writeln('\\r\\n[process exited: ' + exitCode + signal + ']');
+          }
+        } catch {
+          terminal.write(String(event.data));
+        }
+      });
+      socket.addEventListener('close', () => terminal.writeln('\\r\\n[session disconnected]'));
+      socket.addEventListener('error', () => terminal.writeln('\\r\\n[session connection error]'));
+
+      window.addEventListener('resize', fit);
+      new ResizeObserver(fit).observe(terminalHost);
+      window.setTimeout(fit, 0);
+    </script>
+  </body>
+</html>`
 }
 
 function sendJson(socket: { readyState: number; send(data: string): void }, value: unknown): void {

@@ -5,7 +5,7 @@ import path from 'node:path'
 
 import { Command } from 'commander'
 
-import { startServer } from '../http/server.js'
+import { startServer, startWebUiServer } from '../http/server.js'
 import { getDefaultDataDir } from '../schedules/store.js'
 
 interface ServerCommandOptions {
@@ -15,10 +15,15 @@ interface ServerCommandOptions {
   logger?: boolean
   port?: string
   url?: string
+  webUi?: boolean
+  webUiHost?: string
+  webUiPort?: string
+  webUiServerUrl?: string
 }
 
 const DEFAULT_HOST = '0.0.0.0'
 const DEFAULT_PORT = 3000
+const DEFAULT_WEB_UI_PORT = 3001
 
 async function main(argv: string[]): Promise<void> {
   const program = new Command()
@@ -33,11 +38,18 @@ async function main(argv: string[]): Promise<void> {
     .option('--host <host>', 'Host to bind.', process.env.HOST ?? DEFAULT_HOST)
     .option('--port <port>', 'Port to bind.', process.env.PORT ?? String(DEFAULT_PORT))
     .option('--data-dir <dir>', 'Directory for daemon state.', getDefaultDataDir())
+    .option('--web-ui', 'Serve the Doppel administrative web UI on a separate port.')
+    .option('--web-ui-host <host>', 'Web UI host to bind.')
+    .option('--web-ui-port <port>', 'Web UI port to bind.', process.env.WEB_UI_PORT ?? String(DEFAULT_WEB_UI_PORT))
+    .option('--web-ui-server-url <url>', 'Daemon URL used by the administrative web UI.')
     .option('--logger', 'Enable Fastify logger.')
     .action(async (options: ServerCommandOptions) => {
       const port = parsePort(options.port)
+      const webUiPort = options.webUi === true ? parsePort(options.webUiPort, DEFAULT_WEB_UI_PORT) : DEFAULT_WEB_UI_PORT
       const dataDir = options.dataDir ?? getDefaultDataDir()
       const host = options.host ?? DEFAULT_HOST
+      const webUiHost = options.webUiHost ?? host
+      const daemonUrl = options.webUiServerUrl ?? getLocalServerUrl(host, port)
 
       if (options.daemon === true) {
         startDaemon({
@@ -45,6 +57,9 @@ async function main(argv: string[]): Promise<void> {
           dataDir,
           host,
           port: String(port),
+          webUiHost,
+          webUiPort: String(webUiPort),
+          webUiServerUrl: daemonUrl,
         })
         return
       }
@@ -55,6 +70,15 @@ async function main(argv: string[]): Promise<void> {
         logger: options.logger,
         port,
       })
+
+      if (options.webUi === true) {
+        await startWebUiServer({
+          daemonUrl,
+          host: webUiHost,
+          logger: options.logger,
+          port: webUiPort,
+        })
+      }
     })
 
   program
@@ -119,7 +143,8 @@ async function main(argv: string[]): Promise<void> {
 }
 
 function startDaemon(
-  options: Required<Pick<ServerCommandOptions, 'dataDir' | 'host' | 'port'>> & Pick<ServerCommandOptions, 'logger'>,
+  options: Required<Pick<ServerCommandOptions, 'dataDir' | 'host' | 'port'>> &
+    Pick<ServerCommandOptions, 'logger' | 'webUi' | 'webUiHost' | 'webUiPort' | 'webUiServerUrl'>,
 ): void {
   const entrypoint = process.argv[1]
   if (!entrypoint) {
@@ -145,6 +170,22 @@ function startDaemon(
     args.push('--logger')
   }
 
+  if (options.webUi === true) {
+    args.push('--web-ui')
+
+    if (options.webUiHost) {
+      args.push('--web-ui-host', options.webUiHost)
+    }
+
+    if (options.webUiPort) {
+      args.push('--web-ui-port', options.webUiPort)
+    }
+
+    if (options.webUiServerUrl) {
+      args.push('--web-ui-server-url', options.webUiServerUrl)
+    }
+  }
+
   const child = spawn(process.execPath, args, {
     detached: true,
     stdio: ['ignore', logFd, logFd],
@@ -157,6 +198,7 @@ function startDaemon(
       daemon: true,
       logPath,
       pid: child.pid,
+      webUi: options.webUi === true,
     })}\n`,
   )
 }
@@ -165,14 +207,19 @@ function withDefaultCommand(argv: string[]): string[] {
   return argv.length <= 2 ? [...argv, 'start'] : argv
 }
 
-function parsePort(value: string | undefined): number {
-  const port = Number(value ?? DEFAULT_PORT)
+function parsePort(value: string | undefined, fallback = DEFAULT_PORT): number {
+  const port = Number(value ?? fallback)
 
   if (!Number.isInteger(port) || port <= 0) {
     throw new Error(`Invalid port: ${value}`)
   }
 
   return port
+}
+
+function getLocalServerUrl(host: string, port: number): string {
+  const hostname = host === '0.0.0.0' || host === '::' ? 'localhost' : host
+  return `http://${hostname}:${port}`
 }
 
 function getPidPath(dataDir: string): string {
