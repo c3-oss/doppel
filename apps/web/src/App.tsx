@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 
 import { Layout } from './components/Layout.js';
-import { HealthPage } from './pages/HealthPage.js';
+import { DaemonPage } from './pages/DaemonPage.js';
 import { trpc } from './trpc.js';
 import { createDoppelTrpcClient, queryClient } from './utils/trpc.js';
 
@@ -12,7 +12,7 @@ export function App() {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <Layout>
-          <HealthPage />
+          <DaemonPage />
         </Layout>
       </QueryClientProvider>
     </trpc.Provider>

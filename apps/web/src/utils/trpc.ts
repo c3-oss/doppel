@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { httpBatchLink } from '@trpc/client';
+import { getUntypedClient, httpBatchLink } from '@trpc/client';
 import superjson from 'superjson';
 
 import { trpc } from '../trpc.js';
@@ -17,4 +17,14 @@ export function createDoppelTrpcClient() {
       }),
     ],
   });
+}
+
+const daemonTrpcClient = getUntypedClient(createDoppelTrpcClient());
+
+export function daemonQuery(path: string, input?: unknown) {
+  return daemonTrpcClient.query(path, input);
+}
+
+export function daemonMutation(path: string, input?: unknown) {
+  return daemonTrpcClient.mutation(path, input);
 }
