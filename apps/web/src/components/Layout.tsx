@@ -1,7 +1,16 @@
 import { Activity } from 'lucide-react'
 import type { PropsWithChildren } from 'react'
 
-export function Layout({ children }: PropsWithChildren) {
+/**
+ * Props accepted by {@link Layout}.
+ */
+export type LayoutProps = PropsWithChildren
+
+/**
+ * Provides the shared application shell and static product header for web
+ * pages.
+ */
+export function Layout({ children }: LayoutProps) {
   return (
     <main className="app-shell">
       <header className="topbar">

@@ -2,6 +2,9 @@ import { RefreshCcw } from 'lucide-react'
 
 import { trpc } from '../trpc.js'
 
+/**
+ * Shows the daemon health endpoint status with an explicit refresh control.
+ */
 export function HealthPage() {
   const health = trpc.health.useQuery(undefined, {
     refetchOnWindowFocus: false,

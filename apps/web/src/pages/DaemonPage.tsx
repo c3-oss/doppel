@@ -7,6 +7,10 @@ import { daemonMutation, daemonQuery } from '../utils/trpc.js'
 
 const DEFAULT_SESSION = 'default'
 
+/**
+ * Session summary shape consumed by the daemon dashboard after response
+ * normalization.
+ */
 type SessionSummary = {
   name: string
   status?: string
@@ -15,6 +19,10 @@ type SessionSummary = {
   exitCode?: number | null
 }
 
+/**
+ * Schedule summary shape consumed by the daemon dashboard after response
+ * normalization.
+ */
 type ScheduleSummary = {
   id: string
   name: string
@@ -26,12 +34,18 @@ type ScheduleSummary = {
   nextRunAt?: string
 }
 
+/**
+ * Reads the initial selected session from the current URL.
+ */
 function getInitialSessionName() {
   const sessionName = new URLSearchParams(window.location.search).get('session')?.trim()
 
   return sessionName || DEFAULT_SESSION
 }
 
+/**
+ * Narrows unknown daemon responses to record-like payloads before field access.
+ */
 function asRecord(value: unknown) {
   if (!value || typeof value !== 'object') {
     return undefined
@@ -40,14 +54,25 @@ function asRecord(value: unknown) {
   return value as Record<string, unknown>
 }
 
+/**
+ * Returns a string value only when the daemon field has the expected type.
+ */
 function stringFrom(value: unknown) {
   return typeof value === 'string' ? value : undefined
 }
 
+/**
+ * Returns numeric exit codes, preserves explicit null exits, and drops all
+ * other values.
+ */
 function numberOrNullFrom(value: unknown) {
   return typeof value === 'number' ? value : value === null ? null : undefined
 }
 
+/**
+ * Accepts both raw array responses and object-wrapped collections from daemon
+ * procedures.
+ */
 function arrayFromResponse(value: unknown, key: string) {
   if (Array.isArray(value)) {
     return value
@@ -59,6 +84,9 @@ function arrayFromResponse(value: unknown, key: string) {
   return Array.isArray(collection) ? collection : []
 }
 
+/**
+ * Normalizes a daemon session payload into the stable dashboard view model.
+ */
 function normalizeSession(value: unknown, fallbackName: string): SessionSummary {
   if (typeof value === 'string') {
     return {
@@ -83,10 +111,16 @@ function normalizeSession(value: unknown, fallbackName: string): SessionSummary 
   }
 }
 
+/**
+ * Normalizes any sessions list response shape returned by the daemon.
+ */
 function normalizeSessions(value: unknown) {
   return arrayFromResponse(value, 'sessions').map((session, index) => normalizeSession(session, `session-${index + 1}`))
 }
 
+/**
+ * Normalizes a daemon schedule payload into the stable dashboard view model.
+ */
 function normalizeSchedule(value: unknown, fallbackIndex: number): ScheduleSummary {
   const record = asRecord(value)
 
@@ -116,10 +150,17 @@ function normalizeSchedule(value: unknown, fallbackIndex: number): ScheduleSumma
   }
 }
 
+/**
+ * Normalizes any schedules list response shape returned by the daemon.
+ */
 function normalizeSchedules(value: unknown) {
   return arrayFromResponse(value, 'schedules').map(normalizeSchedule)
 }
 
+/**
+ * Formats daemon ISO timestamps for display while preserving invalid strings
+ * for debugging.
+ */
 function formatDate(value?: string) {
   if (!value) {
     return 'Not scheduled'
@@ -134,6 +175,10 @@ function formatDate(value?: string) {
   return timestamp.toLocaleString()
 }
 
+/**
+ * Renders the daemon administration page for sessions, schedules, and the
+ * selected interactive terminal.
+ */
 export function DaemonPage() {
   const queryClient = useQueryClient()
   const [selectedSession, setSelectedSession] = useState(getInitialSessionName)

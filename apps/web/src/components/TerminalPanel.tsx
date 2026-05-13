@@ -7,12 +7,27 @@ import '@xterm/xterm/css/xterm.css'
 
 import { getDoppelServerUrl } from '../config.js'
 
-type TerminalPanelProps = {
+/**
+ * Props accepted by {@link TerminalPanel}.
+ */
+export type TerminalPanelProps = {
+  /**
+   * Name of the daemon session to attach to over the terminal websocket.
+   */
   sessionName: string
 }
 
+/**
+ * Browser-side connection lifecycle shown in the terminal status pill.
+ */
 type TerminalConnectionState = 'connecting' | 'connected' | 'closed' | 'error'
 
+/**
+ * Minimal subset of daemon terminal websocket messages consumed by the web UI.
+ *
+ * The websocket route is intentionally treated as an untrusted boundary; raw
+ * JSON is parsed into this narrow union before it can update terminal state.
+ */
 type TerminalMessage =
   | {
       type: 'output'
@@ -28,6 +43,10 @@ type TerminalMessage =
       signal?: unknown
     }
 
+/**
+ * Builds the websocket URL for the daemon terminal stream that matches the
+ * currently configured HTTP daemon origin.
+ */
 function getTerminalWebSocketUrl(sessionName: string) {
   const baseUrl = new URL(getDoppelServerUrl())
   const websocketUrl = new URL(`/ws/terminal/${encodeURIComponent(sessionName)}`, baseUrl)
@@ -37,6 +56,12 @@ function getTerminalWebSocketUrl(sessionName: string) {
   return websocketUrl.toString()
 }
 
+/**
+ * Parses raw websocket data into the terminal message protocol subset.
+ *
+ * Unknown message types and malformed JSON are ignored so daemon-side protocol
+ * drift does not crash the React tree.
+ */
 function parseTerminalMessage(data: string): TerminalMessage | null {
   try {
     const message = JSON.parse(data) as Partial<TerminalMessage>
@@ -51,6 +76,9 @@ function parseTerminalMessage(data: string): TerminalMessage | null {
   return null
 }
 
+/**
+ * Extracts the optional session status string from a daemon status payload.
+ */
 function getSessionStatus(session: unknown) {
   if (!session || typeof session !== 'object') {
     return undefined
@@ -61,6 +89,9 @@ function getSessionStatus(session: unknown) {
   return typeof status === 'string' ? status : undefined
 }
 
+/**
+ * Renders an interactive xterm.js terminal attached to a daemon session.
+ */
 export function TerminalPanel({ sessionName }: TerminalPanelProps) {
   const frameRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
