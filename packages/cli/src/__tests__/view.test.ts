@@ -18,6 +18,11 @@ describe('view command helpers', () => {
         launches.push(options)
 
         return {
+          on(event, handler) {
+            if (event === 'disconnected') {
+              queueMicrotask(handler)
+            }
+          },
           async newPage() {
             return {
               async goto(url: string) {

@@ -32,7 +32,7 @@
   },
   "scripts": {
     "dev": "node --import @swc-node/register/esm-register src/bin/server.ts",
-    "build": "tsup",
+    "build": "pnpm --filter @c3-oss/doppel-web build && tsup && rm -rf dist/web && cp -R ../web/dist dist/web",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

@@ -17,14 +17,6 @@ export type {
 } from './commands/send.js'
 export { sessionCommand, buildSessionEnsurePayload } from './commands/session.js'
 export type { SessionEnsurePayload, SessionStartOptions } from './commands/session.js'
-export { viewCommand, getSessionViewUrl, openSessionViewWithLauncher } from './commands/view.js'
-export type {
-  BrowserInstance,
-  BrowserLauncher,
-  BrowserPage,
-  OpenSessionView,
-  ViewOptions,
-} from './commands/view.js'
 export {
   FALLBACK_SERVER_URL,
   createDoppelClient,

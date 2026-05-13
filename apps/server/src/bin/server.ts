@@ -15,7 +15,6 @@ interface ServerCommandOptions {
   logger?: boolean
   port?: string
   url?: string
-  webRoot?: string
 }
 
 const DEFAULT_HOST = '0.0.0.0'
@@ -34,7 +33,6 @@ async function main(argv: string[]): Promise<void> {
     .option('--host <host>', 'Host to bind.', process.env.HOST ?? DEFAULT_HOST)
     .option('--port <port>', 'Port to bind.', process.env.PORT ?? String(DEFAULT_PORT))
     .option('--data-dir <dir>', 'Directory for daemon state.', getDefaultDataDir())
-    .option('--web-root <dir>', 'Directory containing built web UI assets.')
     .option('--logger', 'Enable Fastify logger.')
     .action(async (options: ServerCommandOptions) => {
       const port = parsePort(options.port)
@@ -56,7 +54,6 @@ async function main(argv: string[]): Promise<void> {
         host,
         logger: options.logger,
         port,
-        webRoot: options.webRoot,
       })
     })
 
@@ -122,8 +119,7 @@ async function main(argv: string[]): Promise<void> {
 }
 
 function startDaemon(
-  options: Required<Pick<ServerCommandOptions, 'dataDir' | 'host' | 'port'>> &
-    Pick<ServerCommandOptions, 'logger' | 'webRoot'>,
+  options: Required<Pick<ServerCommandOptions, 'dataDir' | 'host' | 'port'>> & Pick<ServerCommandOptions, 'logger'>,
 ): void {
   const entrypoint = process.argv[1]
   if (!entrypoint) {
@@ -144,10 +140,6 @@ function startDaemon(
     '--data-dir',
     options.dataDir,
   ]
-
-  if (options.webRoot) {
-    args.push('--web-root', options.webRoot)
-  }
 
   if (options.logger === true) {
     args.push('--logger')

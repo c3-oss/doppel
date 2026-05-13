@@ -1,7 +1,4 @@
-import { Command } from 'commander'
 import { chromium } from 'playwright-core'
-
-import { getDefaultServerUrl } from '../trpc-client.js'
 
 export interface ViewOptions {
   session: string
@@ -14,6 +11,8 @@ export interface BrowserPage {
 
 export interface BrowserInstance {
   newPage(): Promise<BrowserPage>
+  on(event: 'disconnected', handler: () => void): unknown
+  isConnected?(): boolean
 }
 
 export interface BrowserLauncher {
@@ -21,10 +20,6 @@ export interface BrowserLauncher {
 }
 
 export type OpenSessionView = (options: ViewOptions) => Promise<void>
-
-export interface ViewCommandDeps {
-  openSessionView?: OpenSessionView
-}
 
 export function getSessionViewUrl(serverUrl: string, session: string): string {
   const url = new URL('/', serverUrl)
@@ -43,16 +38,12 @@ export async function openSessionViewWithLauncher(
   const page = await browser.newPage()
 
   await page.goto(getSessionViewUrl(options.url, options.session))
-}
 
-export function viewCommand(deps: ViewCommandDeps = {}): Command {
-  const openSessionView = deps.openSessionView ?? openSessionViewWithLauncher
+  if (browser.isConnected?.() === false) {
+    return
+  }
 
-  return new Command('view')
-    .description('Open a browser view for a daemon session.')
-    .option('-s, --session <name>', 'Session name.', 'default')
-    .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (options: ViewOptions) => {
-      await openSessionView(options)
-    })
+  await new Promise<void>((resolve) => {
+    browser.on('disconnected', resolve)
+  })
 }

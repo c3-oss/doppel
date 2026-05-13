@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
@@ -126,12 +127,15 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
     })
   } else {
     app.get('/', async (_, reply) => {
-      return reply.type('text/html').send(`<!doctype html>
+      return reply
+        .code(500)
+        .type('text/html')
+        .send(`<!doctype html>
 <html>
   <head><title>Doppel</title></head>
   <body>
-    <h1>Doppel daemon is running</h1>
-    <p>Build the web UI or pass --web-root to serve the browser app.</p>
+    <h1>Doppel web UI assets are missing</h1>
+    <p>Run pnpm build before starting the packaged server.</p>
   </body>
 </html>`)
     })
@@ -150,7 +154,10 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
 
 export async function startServer(options: StartServerOptions = {}): Promise<FastifyInstance> {
   const app = await createServer({
+    dataDir: options.dataDir,
     logger: options.logger ?? true,
+    services: options.services,
+    webRoot: options.webRoot,
   })
   const host = options.host ?? process.env.HOST ?? '0.0.0.0'
   const port = options.port ?? Number(process.env.PORT ?? 3000)
@@ -177,9 +184,15 @@ export function createServerServices(options: Pick<CreateServerOptions, 'dataDir
 }
 
 function resolveWebRoot(webRoot?: string): string | undefined {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url))
   const candidates = webRoot
     ? [webRoot]
-    : [path.join(process.cwd(), 'apps/web/dist'), path.join(process.cwd(), 'dist/web')]
+    : [
+        path.join(moduleDir, '..', 'web'),
+        path.join(process.cwd(), 'apps/web/dist'),
+        path.join(process.cwd(), '../web/dist'),
+        path.join(process.cwd(), 'dist/web'),
+      ]
 
   for (const candidate of candidates) {
     const resolved = path.resolve(candidate)

@@ -19,7 +19,7 @@
   },
   "scripts": {
     "dev": "turbo dev --parallel",
-    "build": "turbo build",
+    "build": "pnpm --filter @c3-oss/doppel-server build && pnpm --filter @c3-oss/doppel build",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:coverage": "turbo test:coverage",
