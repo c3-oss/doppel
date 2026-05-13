@@ -1,6 +1,9 @@
 import { Command } from 'commander';
 import { z } from 'zod';
 
+import { writeJson } from '../output.js';
+import { getDefaultServerUrl } from '../trpc-client.js';
+
 const healthSchema = z.object({
   ok: z.literal(true),
   service: z.string(),
@@ -25,9 +28,9 @@ export async function readHealthStatus(
 export function healthCommand(): Command {
   return new Command('health')
     .description('Check a running doppel server.')
-    .option('-u, --url <url>', 'Server base URL.', 'http://localhost:3000')
+    .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
     .action(async (options: { url: string }) => {
       const status = await readHealthStatus(options.url);
-      process.stdout.write(`${JSON.stringify(status)}\n`);
+      writeJson(process.stdout, status);
     });
 }

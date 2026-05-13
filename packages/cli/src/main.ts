@@ -1,6 +1,10 @@
 import { Command } from 'commander';
 
 import { healthCommand } from './commands/health.js';
+import { scheduleCommand } from './commands/schedule.js';
+import { sendCommand, sendKeyCommand } from './commands/send.js';
+import { sessionCommand } from './commands/session.js';
+import { viewCommand } from './commands/view.js';
 
 const VERSION = '0.1.0';
 
@@ -20,6 +24,11 @@ export async function runCli(argv: readonly string[]): Promise<void> {
     .version(VERSION, '-v, --version');
 
   program.addCommand(healthCommand());
+  program.addCommand(sendCommand());
+  program.addCommand(sendKeyCommand());
+  program.addCommand(sessionCommand());
+  program.addCommand(scheduleCommand());
+  program.addCommand(viewCommand());
 
   await program.parseAsync(stripLeadingDoubleDash(argv));
 }
