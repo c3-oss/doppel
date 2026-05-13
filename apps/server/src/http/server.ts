@@ -15,30 +15,79 @@ import { type Doppel, createDoppel } from '@c3-oss/doppel-core'
 
 import { type TrpcContext, createAppRouter } from '../trpc/router.js'
 
+/**
+ * Options for constructing the daemon Fastify app without binding a socket.
+ *
+ * The daemon app owns the `/health`, `/trpc`, `/ws/terminal/:sessionName`,
+ * `/session-view`, and daemon root routes. Use {@link startServer} when the app
+ * should also listen on a network port.
+ */
 export interface CreateServerOptions {
+  /** Directory used by the default Doppel engine for persisted daemon state. */
   dataDir?: string
+  /**
+   * Enables Fastify request logging.
+   *
+   * Defaults to disabled for {@link createServer}; {@link startServer} enables
+   * logging unless callers explicitly pass `false`.
+   */
   logger?: boolean
+  /** Log encoding used when {@link logger} is enabled. */
   logFormat?: ServerLogFormat
+  /**
+   * Prebuilt Doppel engine to mount into the server.
+   *
+   * This is primarily for tests and embedders that need to share an engine
+   * instance. The server closes the engine from its `onClose` hook.
+   */
   doppel?: Doppel
 }
 
+/** Options for constructing and listening with the daemon server. */
 export interface StartServerOptions extends CreateServerOptions {
+  /** Host interface to bind. Defaults to `HOST` or `0.0.0.0`. */
   host?: string
+  /** TCP port to bind. Defaults to `PORT` or `3000`. */
   port?: number
 }
 
+/**
+ * Options for constructing the administrative web UI server.
+ *
+ * The web UI server is intentionally separate from the daemon/tRPC server. It
+ * serves static browser assets and a runtime config script that points clients
+ * at the daemon URL.
+ */
 export interface CreateWebUiServerOptions {
+  /** Base URL for the daemon server exposed through `/doppel-config.js`. */
   daemonUrl?: string
+  /**
+   * Enables Fastify request logging.
+   *
+   * Defaults to disabled for {@link createWebUiServer};
+   * {@link startWebUiServer} enables logging unless callers pass `false`.
+   */
   logger?: boolean
+  /** Log encoding used when {@link logger} is enabled. */
   logFormat?: ServerLogFormat
+  /** Directory containing the built web UI assets, including `index.html`. */
   webRoot?: string
 }
 
+/** Options for constructing and listening with the administrative web UI. */
 export interface StartWebUiServerOptions extends CreateWebUiServerOptions {
+  /** Host interface to bind. Defaults to `HOST` or `0.0.0.0`. */
   host?: string
+  /** TCP port to bind. Defaults to `WEB_UI_PORT` or `3001`. */
   port?: number
 }
 
+/**
+ * Minimal browser terminal assets served by the daemon for `/session-view`.
+ *
+ * These are loaded from package files at request time so the terminal-only
+ * browser page works in packaged builds without depending on the admin web UI.
+ */
 const SESSION_VIEW_ASSETS = {
   '/session-view/assets/xterm.css': {
     contentType: 'text/css; charset=utf-8',
@@ -56,8 +105,25 @@ const SESSION_VIEW_ASSETS = {
 
 const require = createRequire(import.meta.url)
 
+/** Request log format used by the daemon and administrative web UI servers. */
 export type ServerLogFormat = 'json' | 'pretty'
 
+/**
+ * Creates the daemon Fastify app without starting a listener.
+ *
+ * Route contract:
+ * - `GET /health` returns `{ ok: true, service: 'doppel-server' }`.
+ * - `GET|POST /trpc/*` exposes the application tRPC router.
+ * - `GET /ws/terminal/:sessionName` bridges a terminal session over WebSocket.
+ * - `GET /session-view` serves a terminal-only browser page for one session.
+ * - `GET /session-view/assets/*` serves the xterm assets required by that page.
+ * - `GET /` returns a plain text daemon status message, not the admin UI.
+ *
+ * The terminal WebSocket accepts JSON client messages with either
+ * `{ type: 'input', data: string }` or
+ * `{ type: 'resize', cols: number, rows: number }`. Server messages are JSON
+ * status, output, and exit events.
+ */
 export async function createServer(options: CreateServerOptions = {}): Promise<FastifyInstance> {
   const doppel = options.doppel ?? createDoppel({ dataDir: options.dataDir })
   const app = Fastify({
@@ -87,6 +153,12 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
 
   await app.register(fastifyWebsocket)
 
+  /**
+   * Terminal protocol:
+   * - First sends the ensured session status and buffered history.
+   * - Streams subsequent output and process exit events from the engine.
+   * - Accepts input and resize messages from the browser or CLI client.
+   */
   app.get('/ws/terminal/:sessionName', { websocket: true }, (socket, request) => {
     const params = request.params as { sessionName?: string }
     const sessionName = params.sessionName ?? 'default'
@@ -160,11 +232,16 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
     },
   })
 
+  /**
+   * Terminal-only daemon page. This is deliberately separate from the
+   * administrative web UI and only renders a session terminal client.
+   */
   app.get('/session-view', async (request, reply) => {
     const query = request.query as { session?: string }
     return reply.type('text/html; charset=utf-8').send(renderSessionViewHtml(query.session))
   })
 
+  /** Package-backed static assets required by the terminal-only session page. */
   for (const [assetPath, asset] of Object.entries(SESSION_VIEW_ASSETS)) {
     app.get(assetPath, async (_, reply) => {
       return reply.type(asset.contentType).send(fs.createReadStream(require.resolve(asset.packagePath)))
@@ -184,6 +261,12 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
   return app
 }
 
+/**
+ * Creates and starts the daemon Fastify server.
+ *
+ * This is the network-bound variant of {@link createServer}. It enables request
+ * logging by default and resolves bind defaults from `HOST` and `PORT`.
+ */
 export async function startServer(options: StartServerOptions = {}): Promise<FastifyInstance> {
   const app = await createServer({
     dataDir: options.dataDir,
@@ -198,6 +281,15 @@ export async function startServer(options: StartServerOptions = {}): Promise<Fas
   return app
 }
 
+/**
+ * Creates the administrative web UI Fastify app without starting a listener.
+ *
+ * Route contract:
+ * - `GET /doppel-config.js` assigns `window.__DOPPEL_CONFIG__` with the daemon
+ *   URL used by the browser client.
+ * - `GET /*` serves static assets from `webRoot` when a built UI is available.
+ * - `GET /` returns a 500 diagnostic page when no built UI assets can be found.
+ */
 export async function createWebUiServer(options: CreateWebUiServerOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
     logger: createFastifyLoggerOptions(options),
@@ -237,6 +329,13 @@ export async function createWebUiServer(options: CreateWebUiServerOptions = {}):
   return app
 }
 
+/**
+ * Creates and starts the administrative web UI server.
+ *
+ * This is the network-bound variant of {@link createWebUiServer}. It enables
+ * request logging by default and resolves bind defaults from `HOST` and
+ * `WEB_UI_PORT`.
+ */
 export async function startWebUiServer(options: StartWebUiServerOptions = {}): Promise<FastifyInstance> {
   const app = await createWebUiServer({
     daemonUrl: options.daemonUrl,
@@ -251,6 +350,11 @@ export async function startWebUiServer(options: StartWebUiServerOptions = {}): P
   return app
 }
 
+/**
+ * Resolves the web UI asset directory for source, workspace, and packaged
+ * layouts. Returning `undefined` lets the caller expose a deterministic
+ * diagnostic page instead of failing at startup.
+ */
 function resolveWebRoot(webRoot?: string): string | undefined {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url))
   const candidates = webRoot
@@ -272,6 +376,12 @@ function resolveWebRoot(webRoot?: string): string | undefined {
   return undefined
 }
 
+/**
+ * Converts server logging options into Fastify/Pino configuration.
+ *
+ * Pretty logs are directed to stderr so structured command output can remain on
+ * stdout for CLI callers.
+ */
 function createFastifyLoggerOptions(
   options: Pick<CreateServerOptions, 'logger' | 'logFormat'>,
 ): FastifyServerOptions['logger'] {
@@ -302,6 +412,12 @@ function createFastifyLoggerOptions(
   }
 }
 
+/**
+ * Renders the standalone terminal page served from the daemon.
+ *
+ * The session name is serialized with `JSON.stringify` before embedding so the
+ * inline module receives data, not executable source.
+ */
 function renderSessionViewHtml(sessionName?: string): string {
   const normalizedSessionName = sessionName?.trim() || 'default'
   const serializedSessionName = JSON.stringify(normalizedSessionName)
@@ -423,12 +539,19 @@ function renderSessionViewHtml(sessionName?: string): string {
 </html>`
 }
 
+/** Sends a JSON WebSocket frame only while the socket is open. */
 function sendJson(socket: { readyState: number; send(data: string): void }, value: unknown): void {
   if (socket.readyState === 1) {
     socket.send(JSON.stringify(value))
   }
 }
 
+/**
+ * Parses the terminal WebSocket client protocol and ignores malformed frames.
+ *
+ * Returning `null` is intentional: unsupported input should not tear down the
+ * terminal stream.
+ */
 function parseWebSocketMessage(rawMessage: unknown): Record<string, unknown> | null {
   try {
     const message = rawMessageToString(rawMessage)
@@ -440,6 +563,10 @@ function parseWebSocketMessage(rawMessage: unknown): Record<string, unknown> | n
   }
 }
 
+/**
+ * Normalizes the message shapes emitted by the WebSocket implementation into
+ * UTF-8 text before JSON parsing.
+ */
 function rawMessageToString(rawMessage: unknown): string {
   if (typeof rawMessage === 'string') {
     return rawMessage

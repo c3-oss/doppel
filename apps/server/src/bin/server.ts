@@ -9,18 +9,36 @@ import { getDefaultDataDir } from '@c3-oss/doppel-core'
 
 import { startServer, startWebUiServer } from '../http/server.js'
 
+/**
+ * Parsed options shared by the `doppel-server` CLI commands.
+ *
+ * Commander stores numeric options as strings here; command handlers validate
+ * and convert ports before passing them into the server API.
+ */
 interface ServerCommandOptions {
+  /** Run `start` in a detached child process and write a pidfile. */
   daemon?: boolean
+  /** Directory for daemon state, logs, and the pidfile. */
   dataDir?: string
+  /** Emit machine-readable command output on stdout. */
   json?: boolean
+  /** Emit raw JSON Fastify request logs instead of pretty logs. */
   jsonLogs?: boolean
+  /** Daemon host interface to bind. */
   host?: string
+  /** Enable or disable the Fastify request logger. */
   logger?: boolean
+  /** Daemon TCP port as parsed by Commander. */
   port?: string
+  /** Base URL used by the `status` command for the health check. */
   url?: string
+  /** Start the administrative web UI on a separate server. */
   webUi?: boolean
+  /** Web UI host interface to bind. Defaults to the daemon host. */
   webUiHost?: string
+  /** Web UI TCP port as parsed by Commander. */
   webUiPort?: string
+  /** Daemon URL injected into the administrative web UI runtime config. */
   webUiServerUrl?: string
 }
 
@@ -28,6 +46,7 @@ const DEFAULT_HOST = '0.0.0.0'
 const DEFAULT_PORT = 3000
 const DEFAULT_WEB_UI_PORT = 3001
 
+/** Configures the CLI and dispatches the selected command. */
 async function main(argv: string[]): Promise<void> {
   const program = new Command()
     .name('doppel-server')
@@ -164,6 +183,14 @@ async function main(argv: string[]): Promise<void> {
   await program.parseAsync(withDefaultCommand(argv))
 }
 
+/**
+ * Starts the daemon in a detached child process.
+ *
+ * Protocol contract:
+ * - stdout/stderr from the child are appended to `doppel-server.log`.
+ * - the child pid is written to `doppel-server.pid` in `dataDir`.
+ * - command output is written by the parent in either pretty or JSON form.
+ */
 function startDaemon(
   options: Required<Pick<ServerCommandOptions, 'dataDir' | 'host' | 'port'>> &
     Pick<ServerCommandOptions, 'json' | 'jsonLogs' | 'logger' | 'webUi' | 'webUiHost' | 'webUiPort' | 'webUiServerUrl'>,
@@ -230,10 +257,12 @@ function startDaemon(
   )
 }
 
+/** Defaults an empty CLI invocation to `doppel-server start`. */
 function withDefaultCommand(argv: string[]): string[] {
   return argv.length <= 2 ? [...argv, 'start'] : argv
 }
 
+/** Parses and validates a positive integer TCP port. */
 function parsePort(value: string | undefined, fallback = DEFAULT_PORT): number {
   const port = Number(value ?? fallback)
 
@@ -244,15 +273,18 @@ function parsePort(value: string | undefined, fallback = DEFAULT_PORT): number {
   return port
 }
 
+/** Converts wildcard bind hosts into a browser-friendly local daemon URL. */
 function getLocalServerUrl(host: string, port: number): string {
   const hostname = host === '0.0.0.0' || host === '::' ? 'localhost' : host
   return `http://${hostname}:${port}`
 }
 
+/** Returns the pidfile path for the daemon data directory. */
 function getPidPath(dataDir: string): string {
   return path.join(dataDir, 'doppel-server.pid')
 }
 
+/** Reads a daemon pidfile, returning `null` when it is missing or invalid. */
 function readPid(dataDir: string): number | null {
   try {
     const value = fs.readFileSync(getPidPath(dataDir), 'utf8').trim()
@@ -263,6 +295,7 @@ function readPid(dataDir: string): number | null {
   }
 }
 
+/** Health payload used by the `status` command after probing `/health`. */
 type HealthStatus =
   | {
       ok: true
@@ -273,6 +306,10 @@ type HealthStatus =
       error: string
     }
 
+/**
+ * Reads the daemon HTTP health route and normalizes transport failures into a
+ * status object that the output helpers can print.
+ */
 async function readHealthStatus(serverUrl: string): Promise<HealthStatus> {
   try {
     const response = await fetch(new URL('/health', serverUrl))
@@ -293,14 +330,17 @@ async function readHealthStatus(serverUrl: string): Promise<HealthStatus> {
   }
 }
 
+/** Normalizes unknown thrown values for CLI output. */
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+/** Writes one JSON command result to stdout. */
 function writeJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value)}\n`)
 }
 
+/** Writes the `start --daemon` command result in pretty or JSON format. */
 function writeDaemonStartOutput(
   result: {
     daemon: true
@@ -321,6 +361,7 @@ function writeDaemonStartOutput(
   process.stdout.write(`  web ui: ${result.webUi ? 'enabled' : 'disabled'}\n`)
 }
 
+/** Writes the `status` command result in pretty or JSON format. */
 function writeStatusOutput(
   status:
     | {
@@ -352,6 +393,7 @@ function writeStatusOutput(
   process.stdout.write(`  error: ${status.error}\n`)
 }
 
+/** Writes the `stop` command result in pretty or JSON format. */
 function writeStopOutput(
   result:
     | {

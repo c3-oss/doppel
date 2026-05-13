@@ -3,8 +3,16 @@ import { initTRPC } from '@trpc/server'
 import superjson from 'superjson'
 import { z } from 'zod'
 
+/**
+ * tRPC request context supplied by the Fastify adapter.
+ *
+ * Server callers provide the Doppel engine for all domain operations. Tests can
+ * omit it for procedures, such as `health`, that do not need engine access.
+ */
 export interface TrpcContext {
+  /** Fastify request id associated with the tRPC call, when one is available. */
   requestId?: string
+  /** Engine instance backing terminal sessions and schedules. */
   doppel?: Doppel
 }
 
@@ -17,6 +25,17 @@ const healthPayload = z.object({
   service: z.literal('doppel-server'),
 })
 
+/**
+ * Creates the public tRPC router for daemon clients.
+ *
+ * Router contract:
+ * - `health` returns the daemon health payload.
+ * - `sessions.*` delegates terminal session operations to the Doppel engine.
+ * - `schedules.*` delegates schedule CRUD and execution to the Doppel engine.
+ *
+ * Inputs are validated with schemas shared from `@c3-oss/doppel-core` so HTTP,
+ * CLI, and web consumers use the same domain contract.
+ */
 export function createAppRouter() {
   return t.router({
     health: t.procedure.output(healthPayload).query(() => ({
@@ -67,6 +86,10 @@ export function createAppRouter() {
   })
 }
 
+/**
+ * Returns the request's Doppel engine or fails fast for procedures that require
+ * domain access.
+ */
 function requireDoppel(ctx: TrpcContext): Doppel {
   if (!ctx.doppel) {
     throw new Error('Doppel engine is not available in the tRPC context.')
@@ -75,4 +98,5 @@ function requireDoppel(ctx: TrpcContext): Doppel {
   return ctx.doppel
 }
 
+/** Public tRPC router type consumed by the web app and CLI clients. */
 export type AppRouter = ReturnType<typeof createAppRouter>

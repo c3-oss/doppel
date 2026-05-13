@@ -2,6 +2,7 @@ export { createServer, createWebUiServer, startServer, startWebUiServer } from '
 export type {
   CreateServerOptions,
   CreateWebUiServerOptions,
+  ServerLogFormat,
   StartServerOptions,
   StartWebUiServerOptions,
 } from './http/server.js'
