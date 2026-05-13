@@ -11,6 +11,8 @@ import { getDefaultDataDir } from '../schedules/store.js'
 interface ServerCommandOptions {
   daemon?: boolean
   dataDir?: string
+  json?: boolean
+  jsonLogs?: boolean
   host?: string
   logger?: boolean
   port?: string
@@ -42,7 +44,10 @@ async function main(argv: string[]): Promise<void> {
     .option('--web-ui-host <host>', 'Web UI host to bind.')
     .option('--web-ui-port <port>', 'Web UI port to bind.', process.env.WEB_UI_PORT ?? String(DEFAULT_WEB_UI_PORT))
     .option('--web-ui-server-url <url>', 'Daemon URL used by the administrative web UI.')
+    .option('--json', 'Emit JSON output.')
+    .option('--json-logs', 'Emit raw JSON request logs instead of pretty logs.')
     .option('--logger', 'Enable Fastify logger.')
+    .option('--no-logger', 'Disable Fastify logger.')
     .action(async (options: ServerCommandOptions) => {
       const port = parsePort(options.port)
       const webUiPort = options.webUi === true ? parsePort(options.webUiPort, DEFAULT_WEB_UI_PORT) : DEFAULT_WEB_UI_PORT
@@ -50,12 +55,15 @@ async function main(argv: string[]): Promise<void> {
       const host = options.host ?? DEFAULT_HOST
       const webUiHost = options.webUiHost ?? host
       const daemonUrl = options.webUiServerUrl ?? getLocalServerUrl(host, port)
+      const logger = options.logger ?? true
+      const logFormat = options.jsonLogs === true ? 'json' : 'pretty'
 
       if (options.daemon === true) {
         startDaemon({
           ...options,
           dataDir,
           host,
+          logger,
           port: String(port),
           webUiHost,
           webUiPort: String(webUiPort),
@@ -67,7 +75,8 @@ async function main(argv: string[]): Promise<void> {
       await startServer({
         dataDir,
         host,
-        logger: options.logger,
+        logger,
+        logFormat,
         port,
       })
 
@@ -75,7 +84,8 @@ async function main(argv: string[]): Promise<void> {
         await startWebUiServer({
           daemonUrl,
           host: webUiHost,
-          logger: options.logger,
+          logger,
+          logFormat,
           port: webUiPort,
         })
       }
@@ -86,27 +96,30 @@ async function main(argv: string[]): Promise<void> {
     .description('Check daemon status.')
     .option('--data-dir <dir>', 'Directory for daemon state.', getDefaultDataDir())
     .option('--url <url>', 'Server base URL.', `http://localhost:${DEFAULT_PORT}`)
+    .option('--json', 'Emit JSON output.')
     .action(async (options: ServerCommandOptions) => {
       const pid = readPid(options.dataDir ?? getDefaultDataDir())
       const health = await readHealthStatus(options.url ?? `http://localhost:${DEFAULT_PORT}`)
 
       if (health.ok) {
-        process.stdout.write(
-          `${JSON.stringify({
+        writeStatusOutput(
+          {
             ok: true,
             pid,
             service: health.service,
-          })}\n`,
+          },
+          options,
         )
         return
       }
 
-      process.stdout.write(
-        `${JSON.stringify({
+      writeStatusOutput(
+        {
           ok: false,
           pid,
           error: health.error,
-        })}\n`,
+        },
+        options,
       )
     })
 
@@ -114,27 +127,35 @@ async function main(argv: string[]): Promise<void> {
     .command('stop')
     .description('Stop daemon by pidfile.')
     .option('--data-dir <dir>', 'Directory for daemon state.', getDefaultDataDir())
+    .option('--json', 'Emit JSON output.')
     .action((options: ServerCommandOptions) => {
       const dataDir = options.dataDir ?? getDefaultDataDir()
       const pid = readPid(dataDir)
 
       if (!pid) {
-        process.stdout.write('{"stopped":false,"reason":"pidfile-not-found"}\n')
+        writeStopOutput(
+          {
+            stopped: false,
+            reason: 'pidfile-not-found',
+          },
+          options,
+        )
         return
       }
 
       try {
         process.kill(pid, 'SIGTERM')
         fs.rmSync(getPidPath(dataDir), { force: true })
-        process.stdout.write(`${JSON.stringify({ stopped: true, pid })}\n`)
+        writeStopOutput({ stopped: true, pid }, options)
       } catch (error) {
         fs.rmSync(getPidPath(dataDir), { force: true })
-        process.stdout.write(
-          `${JSON.stringify({
+        writeStopOutput(
+          {
             stopped: false,
             pid,
             reason: getErrorMessage(error),
-          })}\n`,
+          },
+          options,
         )
       }
     })
@@ -144,7 +165,7 @@ async function main(argv: string[]): Promise<void> {
 
 function startDaemon(
   options: Required<Pick<ServerCommandOptions, 'dataDir' | 'host' | 'port'>> &
-    Pick<ServerCommandOptions, 'logger' | 'webUi' | 'webUiHost' | 'webUiPort' | 'webUiServerUrl'>,
+    Pick<ServerCommandOptions, 'json' | 'jsonLogs' | 'logger' | 'webUi' | 'webUiHost' | 'webUiPort' | 'webUiServerUrl'>,
 ): void {
   const entrypoint = process.argv[1]
   if (!entrypoint) {
@@ -166,8 +187,12 @@ function startDaemon(
     options.dataDir,
   ]
 
-  if (options.logger === true) {
-    args.push('--logger')
+  if (options.logger === false) {
+    args.push('--no-logger')
+  }
+
+  if (options.jsonLogs === true) {
+    args.push('--json-logs')
   }
 
   if (options.webUi === true) {
@@ -193,13 +218,14 @@ function startDaemon(
 
   child.unref()
   fs.writeFileSync(getPidPath(options.dataDir), `${child.pid}\n`)
-  process.stdout.write(
-    `${JSON.stringify({
+  writeDaemonStartOutput(
+    {
       daemon: true,
       logPath,
       pid: child.pid,
       webUi: options.webUi === true,
-    })}\n`,
+    },
+    options,
   )
 }
 
@@ -268,6 +294,90 @@ async function readHealthStatus(serverUrl: string): Promise<HealthStatus> {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+function writeJson(value: unknown): void {
+  process.stdout.write(`${JSON.stringify(value)}\n`)
+}
+
+function writeDaemonStartOutput(
+  result: {
+    daemon: true
+    logPath: string
+    pid: number | undefined
+    webUi: boolean
+  },
+  options: Pick<ServerCommandOptions, 'json'>,
+): void {
+  if (options.json === true) {
+    writeJson(result)
+    return
+  }
+
+  process.stdout.write('doppel server started in background\n')
+  process.stdout.write(`  pid: ${result.pid ?? 'unknown'}\n`)
+  process.stdout.write(`  log: ${result.logPath}\n`)
+  process.stdout.write(`  web ui: ${result.webUi ? 'enabled' : 'disabled'}\n`)
+}
+
+function writeStatusOutput(
+  status:
+    | {
+        ok: true
+        pid: number | null
+        service: string
+      }
+    | {
+        ok: false
+        pid: number | null
+        error: string
+      },
+  options: Pick<ServerCommandOptions, 'json'>,
+): void {
+  if (options.json === true) {
+    writeJson(status)
+    return
+  }
+
+  if (status.ok) {
+    process.stdout.write('doppel server is running\n')
+    process.stdout.write(`  service: ${status.service}\n`)
+    process.stdout.write(`  pid: ${status.pid ?? 'unknown'}\n`)
+    return
+  }
+
+  process.stdout.write('doppel server is offline\n')
+  process.stdout.write(`  pid: ${status.pid ?? 'unknown'}\n`)
+  process.stdout.write(`  error: ${status.error}\n`)
+}
+
+function writeStopOutput(
+  result:
+    | {
+        stopped: true
+        pid: number
+      }
+    | {
+        stopped: false
+        pid?: number
+        reason: string
+      },
+  options: Pick<ServerCommandOptions, 'json'>,
+): void {
+  if (options.json === true) {
+    writeJson(result)
+    return
+  }
+
+  if (result.stopped) {
+    process.stdout.write('stopped doppel server\n')
+    process.stdout.write(`  pid: ${result.pid}\n`)
+    return
+  }
+
+  process.stdout.write('doppel server was not stopped\n')
+  process.stdout.write(`  pid: ${result.pid ?? 'unknown'}\n`)
+  process.stdout.write(`  reason: ${result.reason}\n`)
 }
 
 main(process.argv).catch((error: unknown) => {

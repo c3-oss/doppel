@@ -9,7 +9,7 @@ import fastifyStatic from '@fastify/static'
 import fastifyWebsocket from '@fastify/websocket'
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify'
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify'
-import Fastify, { type FastifyInstance } from 'fastify'
+import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify'
 
 import { ScheduleScheduler } from '../schedules/scheduler.js'
 import { ScheduleStore } from '../schedules/store.js'
@@ -20,6 +20,7 @@ import { type TrpcContext, createAppRouter } from '../trpc/router.js'
 export interface CreateServerOptions {
   dataDir?: string
   logger?: boolean
+  logFormat?: ServerLogFormat
   services?: ServerServices
 }
 
@@ -31,6 +32,7 @@ export interface StartServerOptions extends CreateServerOptions {
 export interface CreateWebUiServerOptions {
   daemonUrl?: string
   logger?: boolean
+  logFormat?: ServerLogFormat
   webRoot?: string
 }
 
@@ -56,10 +58,12 @@ const SESSION_VIEW_ASSETS = {
 
 const require = createRequire(import.meta.url)
 
+export type ServerLogFormat = 'json' | 'pretty'
+
 export async function createServer(options: CreateServerOptions = {}): Promise<FastifyInstance> {
   const services = options.services ?? createServerServices(options)
   const app = Fastify({
-    logger: options.logger ?? false,
+    logger: createFastifyLoggerOptions(options),
   })
 
   await app.register(cors, {
@@ -187,6 +191,7 @@ export async function createServer(options: CreateServerOptions = {}): Promise<F
 export async function startServer(options: StartServerOptions = {}): Promise<FastifyInstance> {
   const app = await createServer({
     dataDir: options.dataDir,
+    logFormat: options.logFormat,
     logger: options.logger ?? true,
     services: options.services,
   })
@@ -199,7 +204,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Fas
 
 export async function createWebUiServer(options: CreateWebUiServerOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: options.logger ?? false,
+    logger: createFastifyLoggerOptions(options),
   })
   const daemonUrl = options.daemonUrl ?? 'http://localhost:3000'
   const webRoot = resolveWebRoot(options.webRoot)
@@ -239,6 +244,7 @@ export async function createWebUiServer(options: CreateWebUiServerOptions = {}):
 export async function startWebUiServer(options: StartWebUiServerOptions = {}): Promise<FastifyInstance> {
   const app = await createWebUiServer({
     daemonUrl: options.daemonUrl,
+    logFormat: options.logFormat,
     logger: options.logger ?? true,
     webRoot: options.webRoot,
   })
@@ -285,6 +291,36 @@ function resolveWebRoot(webRoot?: string): string | undefined {
   }
 
   return undefined
+}
+
+function createFastifyLoggerOptions(
+  options: Pick<CreateServerOptions, 'logger' | 'logFormat'>,
+): FastifyServerOptions['logger'] {
+  if (options.logger !== true) {
+    return false
+  }
+
+  if (options.logFormat === 'json') {
+    return {
+      base: undefined,
+      level: 'info',
+    }
+  }
+
+  return {
+    base: undefined,
+    level: 'info',
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        colorize: process.stderr.isTTY,
+        destination: 2,
+        ignore: 'pid,hostname',
+        singleLine: false,
+        translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
+      },
+    },
+  }
 }
 
 function renderSessionViewHtml(sessionName?: string): string {
