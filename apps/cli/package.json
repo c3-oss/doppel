@@ -14,9 +14,7 @@
     "url": "git+https://github.com/c3-oss/doppel.git",
     "directory": "apps/cli"
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -40,6 +38,10 @@
     "test:coverage": "vitest run --coverage",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
+    "lint:fix-unsafe": "biome check --fix --unsafe .",
+    "bump:dev": "ncu --upgrade --dep dev --target minor",
+    "bump:prod": "ncu --upgrade --dep prod --target minor",
+    "bump:all": "pnpm bump:dev && pnpm bump:prod",
     "clean": "rm -rf dist coverage .turbo"
   },
   "dependencies": {

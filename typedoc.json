@@ -1,0 +1,10 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Doppel",
+  "entryPointStrategy": "packages",
+  "includeVersion": false,
+  "out": "docs",
+  "entryPoints": ["packages/*", "apps/*"],
+  "exclude": ["**/**/*.+(cts|mts)", "**/**/*.+(test|spec).ts"],
+  "plugin": ["typedoc-plugin-coverage", "typedoc-plugin-rename-defaults"]
+}

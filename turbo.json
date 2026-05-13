@@ -30,7 +30,22 @@
     "lint:fix": {
       "cache": false
     },
+    "lint:fix-unsafe": {
+      "cache": false
+    },
     "clean": {
+      "cache": false
+    },
+    "bump:dev": {
+      "cache": false
+    },
+    "bump:prod": {
+      "cache": false
+    },
+    "bump:opt": {
+      "cache": false
+    },
+    "bump:all": {
       "cache": false
     }
   }
