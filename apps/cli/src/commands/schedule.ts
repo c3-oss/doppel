@@ -5,38 +5,127 @@ import { writeJson, writeTable } from '../output.js'
 import type { DoppelClientFactory } from '../trpc-client.js'
 import { createDoppelClient, getDefaultServerUrl } from '../trpc-client.js'
 
+/**
+ * Payload sent to the daemon when creating a schedule.
+ */
 export interface ScheduleCreatePayload {
+  /**
+   * Human-readable schedule name.
+   */
   name: string
+
+  /**
+   * Cron expression evaluated by the daemon.
+   */
   cron: string
+
+  /**
+   * Shell command executed when the schedule runs.
+   */
   command: string
+
+  /**
+   * Execution mode selected for the scheduled command.
+   */
   mode?: ScheduleMode
+
+  /**
+   * Session name used when the schedule runs in `session` mode.
+   */
   sessionName?: string
+
+  /**
+   * Initial enabled state; omitted lets the daemon choose its default.
+   */
   enabled?: boolean
+
+  /**
+   * Working directory for the scheduled command.
+   */
   cwd?: string
+
+  /**
+   * Shell executable or command used to run the scheduled command.
+   */
   shell?: string
 }
 
+/**
+ * Commander option bag accepted by `doppel schedule add`.
+ */
 export interface ScheduleCreateOptions {
+  /**
+   * Human-readable schedule name.
+   */
   name?: string
+
+  /**
+   * Cron expression evaluated by the daemon.
+   */
   cron?: string
+
+  /**
+   * Shell command executed when the schedule runs.
+   */
   command?: string
+
+  /**
+   * Execution mode as received from Commander.
+   */
   mode?: string
+
+  /**
+   * Session name for session-backed schedules.
+   */
   session?: string
+
+  /**
+   * Whether `--enabled` was supplied.
+   */
   enabled?: boolean
+
+  /**
+   * Whether `--disabled` was supplied.
+   */
   disabled?: boolean
+
+  /**
+   * Working directory for the schedule command.
+   */
   cwd?: string
+
+  /**
+   * Shell command for the schedule command.
+   */
   shell?: string
+
+  /**
+   * Whether to emit JSON instead of a table.
+   */
   json?: boolean
 }
 
+/**
+ * Injectable dependencies for the schedule command tree.
+ */
 export interface ScheduleCommandDeps {
+  /**
+   * Client factory used to talk to the daemon.
+   */
   clientFactory?: DoppelClientFactory
+
+  /**
+   * Output stream for command responses.
+   */
   stdout?: NodeJS.WriteStream
 }
 
-const SCHEDULE_MODES = ['ephemeral', 'session'] as const
+/**
+ * Supported daemon execution modes for schedules.
+ */
+export type ScheduleMode = 'ephemeral' | 'session'
 
-type ScheduleMode = (typeof SCHEDULE_MODES)[number]
+const SCHEDULE_MODES = ['ephemeral', 'session'] as const satisfies readonly ScheduleMode[]
 
 interface ScheduleRecord {
   id: string
@@ -78,6 +167,9 @@ function parseScheduleMode(value: string | undefined): ScheduleMode | undefined 
   throw new Error(`Invalid --mode "${value}". Expected one of: ${SCHEDULE_MODES.join(', ')}.`)
 }
 
+/**
+ * Converts Commander options into the daemon payload for schedule creation.
+ */
 export function buildScheduleCreatePayload(options: ScheduleCreateOptions): ScheduleCreatePayload {
   if (options.enabled === true && options.disabled === true) {
     throw new Error('Use only one of --enabled or --disabled.')
@@ -95,6 +187,9 @@ export function buildScheduleCreatePayload(options: ScheduleCreateOptions): Sche
   }
 }
 
+/**
+ * Creates the `doppel schedule` command tree.
+ */
 export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
   const clientFactory = deps.clientFactory ?? createDoppelClient
   const stdout = deps.stdout ?? process.stdout
@@ -265,6 +360,9 @@ export function scheduleCommand(deps: ScheduleCommandDeps = {}): Command {
   return command
 }
 
+/**
+ * Keeps list commands useful when the daemon is offline during local workflows.
+ */
 async function queryListOrEmpty<T>(client: ReturnType<DoppelClientFactory>, path: string): Promise<T[]> {
   try {
     return await client.query<T[]>(path)

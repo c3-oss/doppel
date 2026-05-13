@@ -7,26 +7,88 @@ import { createDoppelClient, getDefaultServerUrl } from '../trpc-client.js'
 import { type OpenSessionView, openSessionViewWithLauncher } from './view.js'
 import { type OpenSessionWatch, watchSession } from './watch.js'
 
+/**
+ * Payload sent to the daemon when starting or ensuring a session.
+ */
 export interface SessionEnsurePayload {
+  /**
+   * Session name.
+   */
   name: string
+
+  /**
+   * Optional shell command for the session.
+   */
   shell?: string
+
+  /**
+   * Optional working directory for the session.
+   */
   cwd?: string
+
+  /**
+   * Requested terminal column count.
+   */
   cols?: number
+
+  /**
+   * Requested terminal row count.
+   */
   rows?: number
 }
 
+/**
+ * Injectable dependencies for the session command tree.
+ */
 export interface SessionCommandDeps {
+  /**
+   * Client factory used to talk to the daemon.
+   */
   clientFactory?: DoppelClientFactory
+
+  /**
+   * Browser opener used by `doppel session view`.
+   */
   openSessionView?: OpenSessionView
+
+  /**
+   * Terminal watcher used by `doppel session watch`.
+   */
   openSessionWatch?: OpenSessionWatch
+
+  /**
+   * Output stream for command responses.
+   */
   stdout?: NodeJS.WriteStream
 }
 
+/**
+ * Commander option bag accepted by `doppel session start`.
+ */
 export interface SessionStartOptions {
+  /**
+   * Shell command for the session.
+   */
   shell?: string
+
+  /**
+   * Working directory for the session.
+   */
   cwd?: string
+
+  /**
+   * Terminal column count as received from Commander.
+   */
   cols?: string
+
+  /**
+   * Terminal row count as received from Commander.
+   */
   rows?: string
+
+  /**
+   * Whether to emit JSON instead of a table.
+   */
   json?: boolean
 }
 
@@ -56,6 +118,9 @@ function parsePositiveInteger(value: string | undefined, label: string): number 
   return parsed
 }
 
+/**
+ * Converts session start arguments and options into the daemon ensure payload.
+ */
 export function buildSessionEnsurePayload(name: string, options: SessionStartOptions): SessionEnsurePayload {
   return {
     name,
@@ -66,6 +131,9 @@ export function buildSessionEnsurePayload(name: string, options: SessionStartOpt
   }
 }
 
+/**
+ * Creates the `doppel session` command tree.
+ */
 export function sessionCommand(deps: SessionCommandDeps = {}): Command {
   const clientFactory = deps.clientFactory ?? createDoppelClient
   const openSessionView = deps.openSessionView ?? openSessionViewWithLauncher
@@ -179,6 +247,9 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
   return command
 }
 
+/**
+ * Keeps list commands useful when the daemon is offline during local workflows.
+ */
 async function queryListOrEmpty<T>(client: ReturnType<DoppelClientFactory>, path: string): Promise<T[]> {
   try {
     return await client.query<T[]>(path)

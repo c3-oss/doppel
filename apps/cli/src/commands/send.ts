@@ -6,31 +6,93 @@ import { createDoppelClient, getDefaultServerUrl } from '../trpc-client.js'
 
 const ACCEPTED_KEYS = new Set(['enter', 'ctrl-c', 'ctrl-d', 'esc', 'tab', 'backspace', 'up', 'down', 'left', 'right'])
 
+/**
+ * Payload sent to the daemon for text input.
+ */
 export interface SendCommandPayload {
+  /**
+   * Target session name.
+   */
   name: string
+
+  /**
+   * Text sent to the session.
+   */
   data: string
+
+  /**
+   * Whether the daemon should press Enter after sending the text.
+   */
   enter: boolean
 }
 
+/**
+ * Payload sent to the daemon for special key input.
+ */
 export interface SendKeyPayload {
+  /**
+   * Target session name.
+   */
   name: string
+
+  /**
+   * Normalized key name accepted by the daemon.
+   */
   key: string
 }
 
+/**
+ * Commander option bag accepted by `doppel send-cmd`.
+ */
 export interface SendCommandOptions {
+  /**
+   * Target session name.
+   */
   session?: string
+
+  /**
+   * Whether to press Enter after sending text.
+   */
   enter?: boolean
+
+  /**
+   * Whether to decode supported backslash escapes before sending text.
+   */
   raw?: boolean
+
+  /**
+   * Whether to emit JSON instead of a status line.
+   */
   json?: boolean
 }
 
+/**
+ * Commander option bag accepted by `doppel send-key`.
+ */
 export interface SendKeyOptions {
+  /**
+   * Target session name.
+   */
   session?: string
+
+  /**
+   * Whether to emit JSON instead of a status line.
+   */
   json?: boolean
 }
 
+/**
+ * Injectable dependencies for send commands.
+ */
 export interface SendCommandDeps {
+  /**
+   * Client factory used to talk to the daemon.
+   */
   clientFactory?: DoppelClientFactory
+
+  /**
+   * Output stream for command responses.
+   */
   stdout?: NodeJS.WriteStream
 }
 
@@ -59,6 +121,9 @@ function decodeRawText(value: string): string {
   })
 }
 
+/**
+ * Converts send command arguments and options into the daemon text payload.
+ */
 export function buildSendCommandPayload(text: readonly string[], options: SendCommandOptions): SendCommandPayload {
   const data = text.join(' ')
 
@@ -69,6 +134,9 @@ export function buildSendCommandPayload(text: readonly string[], options: SendCo
   }
 }
 
+/**
+ * Converts a key name and options into the daemon key payload.
+ */
 export function buildSendKeyPayload(key: string, options: SendKeyOptions): SendKeyPayload {
   const normalizedKey = key.toLowerCase()
 
@@ -82,6 +150,9 @@ export function buildSendKeyPayload(key: string, options: SendKeyOptions): SendK
   }
 }
 
+/**
+ * Creates the `doppel send-cmd` command.
+ */
 export function sendCommand(deps: SendCommandDeps = {}): Command {
   const clientFactory = deps.clientFactory ?? createDoppelClient
   const stdout = deps.stdout ?? process.stdout
@@ -114,6 +185,9 @@ export function sendCommand(deps: SendCommandDeps = {}): Command {
     )
 }
 
+/**
+ * Creates the `doppel send-key` command.
+ */
 export function sendKeyCommand(deps: SendCommandDeps = {}): Command {
   const clientFactory = deps.clientFactory ?? createDoppelClient
   const stdout = deps.stdout ?? process.stdout

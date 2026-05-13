@@ -5,17 +5,44 @@ import { formatCliError } from '../errors.js'
 import { writeJson } from '../output.js'
 import { getDefaultServerUrl } from '../trpc-client.js'
 
-const healthSchema = z.object({
+/**
+ * Successful `/health` response from the daemon.
+ */
+export interface HealthStatus {
+  /**
+   * Discriminator indicating the daemon is healthy.
+   */
+  ok: true
+
+  /**
+   * Service identifier returned by the daemon.
+   */
+  service: string
+}
+
+const healthSchema: z.ZodType<HealthStatus> = z.object({
   ok: z.literal(true),
   service: z.string(),
 })
 
-export type HealthStatus = z.infer<typeof healthSchema>
+/**
+ * Offline health result returned when the daemon cannot be reached or parsed.
+ */
 export type OfflineHealthStatus = {
+  /**
+   * Discriminator indicating the daemon was not healthy.
+   */
   ok: false
+
+  /**
+   * User-facing reason for the failed health check.
+   */
   error: string
 }
 
+/**
+ * Reads and validates daemon health without throwing for offline servers.
+ */
 export async function readHealthStatus(
   serverUrl: string,
   fetchImpl: typeof fetch = fetch,
@@ -40,6 +67,9 @@ export async function readHealthStatus(
   }
 }
 
+/**
+ * Creates the `doppel health` command.
+ */
 export function healthCommand(): Command {
   return new Command('health')
     .description('Check a running doppel server.')

@@ -7,6 +7,9 @@ import { sessionCommand } from './commands/session.js'
 
 const VERSION = '0.1.0'
 
+/**
+ * Normalizes `node entry -- <command>` invocations used by some package runners.
+ */
 function stripLeadingDoubleDash(argv: readonly string[]): string[] {
   if (argv.length >= 3 && argv[2] === '--') {
     const executable = argv[0]
@@ -22,6 +25,9 @@ function stripLeadingDoubleDash(argv: readonly string[]): string[] {
   return [...argv]
 }
 
+/**
+ * Runs the doppel command line program with the provided process argument vector.
+ */
 export async function runCli(argv: readonly string[]): Promise<void> {
   const program = new Command()
     .name('doppel')

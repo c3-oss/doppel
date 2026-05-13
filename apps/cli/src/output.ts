@@ -14,10 +14,16 @@ function sortJsonValue(value: unknown): unknown {
   )
 }
 
+/**
+ * Serializes a value as compact JSON with recursively sorted object keys.
+ */
 export function deterministicJson(value: unknown): string {
   return JSON.stringify(sortJsonValue(value ?? null))
 }
 
+/**
+ * Writes deterministic JSON followed by a newline.
+ */
 export function writeJson(stdout: NodeJS.WriteStream, value: unknown): void {
   stdout.write(`${deterministicJson(value)}\n`)
 }
@@ -28,13 +34,34 @@ const MIN_COLUMN_WIDTH = 6
 const RULE_CHAR = '-'
 const TRUNCATION_MARKER = '...'
 
+/**
+ * Rendering options for {@link writeTable}.
+ */
 export interface TableOptions {
+  /**
+   * Ordered column keys to render.
+   */
   columns: readonly string[]
+
+  /**
+   * Optional per-column width caps applied before terminal-width shrinking.
+   */
   maxColumnWidths?: Readonly<Record<string, number>>
+
+  /**
+   * Columns that should preserve the end of long values when truncated.
+   */
   tailColumns?: ReadonlySet<string>
+
+  /**
+   * Explicit terminal width override, primarily for tests.
+   */
   terminalWidth?: number
 }
 
+/**
+ * Writes a terminal-width-aware table with deterministic columns and truncation.
+ */
 export function writeTable(stdout: NodeJS.WriteStream, rows: readonly object[], options: TableOptions): void {
   const columns = options.columns
   const terminalWidth = options.terminalWidth ?? stdout.columns ?? DEFAULT_TERMINAL_WIDTH
@@ -118,6 +145,9 @@ function pickShrinkCandidate(widths: readonly number[], floors: readonly number[
   return index === -1 ? null : index
 }
 
+/**
+ * Fits a cell into its assigned width while optionally preserving tail content.
+ */
 function fitCell(value: string, width: number, tail: boolean): string {
   if (width <= 0) {
     return ''
