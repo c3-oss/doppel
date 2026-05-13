@@ -48,6 +48,9 @@ pnpm --filter @c3-oss/doppel-web dev
 `doppel-server start` runs the daemon HTTP/tRPC server on port `3000` by
 default. That server owns `/health`, `/trpc`, `/ws/terminal/:sessionName`, and
 the minimal `/session-view` browser terminal used by `doppel session view`.
+Server request logs are pretty-printed by default. Use `--json-logs` when raw
+newline-delimited JSON logs are needed, or `--no-logger` to disable request
+logging.
 
 `doppel session view [name]` opens only a black terminal view for the selected
 session. It is not the administrative Web UI.
@@ -62,6 +65,22 @@ doppel-server start --web-ui
 The Web UI binds to port `3001` by default and talks to the daemon at
 `http://localhost:3000`. Override with `--web-ui-port`, `--web-ui-host`, and
 `--web-ui-server-url` when needed.
+
+CLI commands print human-readable output by default. List commands render
+terminal-width-aware tables, while mutating commands print short status
+messages. Pass `--json` to commands such as `doppel health`,
+`doppel session list`, `doppel session start`, `doppel session kill`,
+`doppel send-cmd`, `doppel send-key`, and `doppel schedule ...` when scripts
+need structured output.
+
+Server management commands follow the same convention:
+
+```bash
+doppel-server status
+doppel-server status --json
+doppel-server start --daemon
+doppel-server start --daemon --json
+```
 
 ## Release
 

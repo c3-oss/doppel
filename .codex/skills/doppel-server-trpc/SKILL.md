@@ -20,6 +20,9 @@ description: Server and tRPC workflow for doppel. Use when changing Fastify rout
 - Keep the daemon/tRPC surface separate from the administrative Web UI:
   `/session-view` is a terminal-only daemon page, while `--web-ui` serves
   `apps/web` on a separate port.
+- `doppel-server` should pretty-print command output and request logs by
+  default. Use `--json` for structured command output and `--json-logs` for raw
+  request logs.
 
 ## Validation
 

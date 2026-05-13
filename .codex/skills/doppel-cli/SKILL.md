@@ -15,7 +15,11 @@ description: CLI workflow for doppel. Use when adding commands, command options,
 
 - Keep commands small and test helpers directly.
 - Hide network calls behind injectable functions when possible.
-- Use deterministic stdout for command output.
+- Use human-readable stdout by default. List commands should render
+  terminal-width-aware tables; mutating commands should print short status
+  messages.
+- Add `--json` for commands that return structured data, and keep JSON compact
+  and deterministic for scripts.
 - `doppel session view` must open the daemon `/session-view` terminal-only page,
   not the administrative Web UI.
 
