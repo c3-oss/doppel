@@ -63,11 +63,13 @@ doppel session start dev
 doppel send-cmd --session dev "pnpm dev"
 ```
 
-Watch the session in your terminal, or open the browser terminal view:
+Watch the session in your terminal, print the served browser terminal view URL,
+or open the browser terminal view directly:
 
 ```bash
 doppel session watch dev
 doppel session view dev
+doppel session view dev --open
 ```
 
 Schedule a command:
@@ -111,6 +113,7 @@ doppel session list
 doppel session start [name]
 doppel session watch [name]
 doppel session view [name]
+doppel session view [name] --open
 doppel session kill [name]
 
 doppel send-cmd [-s name] "command text"
@@ -167,8 +170,10 @@ newline-delimited JSON logs, or `--no-logger` to disable request logging.
 
 ## Web UI
 
-`doppel session view [name]` opens the minimal terminal-only page on the daemon
-port. It is not the administrative web UI.
+`doppel session view [name]` ensures the session and prints the minimal
+terminal-only page URL on the daemon port. Use `doppel session view [name]
+--open` to launch that served view in Chrome through Playwright. It is not the
+administrative web UI.
 
 Start the administrative web UI explicitly:
 

@@ -4,7 +4,7 @@ import { isDaemonConnectionError } from '../errors.js'
 import { writeJson, writeTable } from '../output.js'
 import type { DoppelClientFactory } from '../trpc-client.js'
 import { createDoppelClient, getDefaultServerUrl } from '../trpc-client.js'
-import { type OpenSessionView, openSessionViewWithLauncher } from './view.js'
+import { type OpenSessionView, getSessionViewUrl, openSessionViewWithLauncher } from './view.js'
 import { type OpenSessionWatch, watchSession } from './watch.js'
 
 /**
@@ -221,15 +221,22 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
 
   command
     .command('view')
-    .description('Open a browser view for a daemon session.')
+    .description('Print or open a browser view for a daemon session.')
     .argument('[name]', 'Session name.', 'default')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (name: string, options: { url: string }) => {
+    .option('--open', 'Open the served session view in Chrome through Playwright.')
+    .action(async (name: string, options: { open?: boolean; url: string }) => {
       await clientFactory(options.url).mutation('sessions.ensure', { name })
-      await openSessionView({
-        session: name,
-        url: options.url,
-      })
+
+      if (options.open === true) {
+        await openSessionView({
+          session: name,
+          url: options.url,
+        })
+        return
+      }
+
+      stdout.write(`${getSessionViewUrl(options.url, name)}\n`)
     })
 
   command
