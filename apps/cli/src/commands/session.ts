@@ -4,7 +4,7 @@ import { isDaemonConnectionError } from '../errors.js'
 import { writeJson, writeTable } from '../output.js'
 import type { DoppelClientFactory } from '../trpc-client.js'
 import { createDoppelClient, getDefaultServerUrl } from '../trpc-client.js'
-import { type OpenSessionView, openSessionViewWithLauncher } from './view.js'
+import { type OpenSessionView, getSessionViewUrl, openSessionViewWithLauncher } from './view.js'
 import { type OpenSessionWatch, watchSession } from './watch.js'
 
 /**
@@ -224,8 +224,15 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
     .description('Open a browser view for a daemon session.')
     .argument('[name]', 'Session name.', 'default')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .action(async (name: string, options: { url: string }) => {
+    .option('--serve', 'Print the served session view URL without launching Chrome.')
+    .action(async (name: string, options: { serve?: boolean; url: string }) => {
       await clientFactory(options.url).mutation('sessions.ensure', { name })
+
+      if (options.serve === true) {
+        stdout.write(`${getSessionViewUrl(options.url, name)}\n`)
+        return
+      }
+
       await openSessionView({
         session: name,
         url: options.url,

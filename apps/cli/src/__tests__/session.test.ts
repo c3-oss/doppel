@@ -122,6 +122,43 @@ describe('session command helpers', () => {
     ])
   })
 
+  it('prints the served session view URL without opening Chrome', async () => {
+    const calls: Array<{ path: string; input: unknown }> = []
+    const opened: Array<{ session: string; url: string }> = []
+    const stdout = createStdout()
+    const client: DoppelClient = {
+      query: async <TOutput = unknown>() => null as TOutput,
+      mutation: async <TOutput = unknown>(path: string, input?: unknown) => {
+        calls.push({ path, input })
+        return { name: 'work' } as TOutput
+      },
+    }
+    const program = new Command().exitOverride()
+
+    program.addCommand(
+      sessionCommand({
+        clientFactory: () => client,
+        openSessionView: async (options) => {
+          opened.push(options)
+        },
+        stdout: stdout.stdout,
+      }),
+    )
+
+    await program.parseAsync(['node', 'test', 'session', 'view', 'work', '--url', 'http://daemon.test', '--serve'])
+
+    expect(calls).toEqual([
+      {
+        path: 'sessions.ensure',
+        input: {
+          name: 'work',
+        },
+      },
+    ])
+    expect(opened).toEqual([])
+    expect(stdout.output()).toBe('http://daemon.test/session-view?session=work\n')
+  })
+
   it('defaults session watch to the default session', async () => {
     const watched: Array<{ session: string; url: string }> = []
     const program = new Command().exitOverride()
