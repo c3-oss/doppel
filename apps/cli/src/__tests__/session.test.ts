@@ -44,7 +44,7 @@ describe('session command helpers', () => {
     ).toThrow('cols must be a positive integer.')
   })
 
-  it('ensures a session before opening its browser view', async () => {
+  it('opens the browser view when requested', async () => {
     const calls: Array<{ path: string; input: unknown }> = []
     const opened: Array<{ session: string; url: string }> = []
     const client: DoppelClient = {
@@ -65,7 +65,7 @@ describe('session command helpers', () => {
       }),
     )
 
-    await program.parseAsync(['node', 'test', 'session', 'view', 'work', '--url', 'http://daemon.test'])
+    await program.parseAsync(['node', 'test', 'session', 'view', 'work', '--url', 'http://daemon.test', '--open'])
 
     expect(calls).toEqual([
       {
@@ -83,9 +83,10 @@ describe('session command helpers', () => {
     ])
   })
 
-  it('defaults session view to the default session', async () => {
+  it('defaults session view to the default session URL', async () => {
     const calls: Array<{ path: string; input: unknown }> = []
     const opened: Array<{ session: string; url: string }> = []
+    const stdout = createStdout()
     const client: DoppelClient = {
       query: async <TOutput = unknown>() => null as TOutput,
       mutation: async <TOutput = unknown>(path: string, input?: unknown) => {
@@ -101,6 +102,7 @@ describe('session command helpers', () => {
         openSessionView: async (options) => {
           opened.push(options)
         },
+        stdout: stdout.stdout,
       }),
     )
 
@@ -114,15 +116,11 @@ describe('session command helpers', () => {
         },
       },
     ])
-    expect(opened).toEqual([
-      {
-        session: 'default',
-        url: 'http://localhost:3000',
-      },
-    ])
+    expect(opened).toEqual([])
+    expect(stdout.output()).toBe('http://localhost:3000/session-view?session=default\n')
   })
 
-  it('prints the served session view URL without opening Chrome', async () => {
+  it('prints the requested session view URL without opening Chrome', async () => {
     const calls: Array<{ path: string; input: unknown }> = []
     const opened: Array<{ session: string; url: string }> = []
     const stdout = createStdout()
@@ -145,7 +143,7 @@ describe('session command helpers', () => {
       }),
     )
 
-    await program.parseAsync(['node', 'test', 'session', 'view', 'work', '--url', 'http://daemon.test', '--serve'])
+    await program.parseAsync(['node', 'test', 'session', 'view', 'work', '--url', 'http://daemon.test'])
 
     expect(calls).toEqual([
       {

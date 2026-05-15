@@ -221,22 +221,22 @@ export function sessionCommand(deps: SessionCommandDeps = {}): Command {
 
   command
     .command('view')
-    .description('Open a browser view for a daemon session.')
+    .description('Print or open a browser view for a daemon session.')
     .argument('[name]', 'Session name.', 'default')
     .option('-u, --url <url>', 'Server base URL.', getDefaultServerUrl())
-    .option('--serve', 'Print the served session view URL without launching Chrome.')
-    .action(async (name: string, options: { serve?: boolean; url: string }) => {
+    .option('--open', 'Open the served session view in Chrome through Playwright.')
+    .action(async (name: string, options: { open?: boolean; url: string }) => {
       await clientFactory(options.url).mutation('sessions.ensure', { name })
 
-      if (options.serve === true) {
-        stdout.write(`${getSessionViewUrl(options.url, name)}\n`)
+      if (options.open === true) {
+        await openSessionView({
+          session: name,
+          url: options.url,
+        })
         return
       }
 
-      await openSessionView({
-        session: name,
-        url: options.url,
-      })
+      stdout.write(`${getSessionViewUrl(options.url, name)}\n`)
     })
 
   command
