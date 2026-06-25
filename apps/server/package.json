@@ -1,6 +1,6 @@
 {
   "name": "@c3-oss/doppel-server",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Doppel HTTP and tRPC server.",
   "author": "Caian Ertl <hi@caian.org>",
   "license": "MIT",
@@ -14,7 +14,9 @@
     "url": "git+https://github.com/c3-oss/doppel.git",
     "directory": "apps/server"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
