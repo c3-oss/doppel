@@ -60,7 +60,7 @@
     "commitizen": "^4.3.1",
     "concurrently": "^9.2.1",
     "husky": "^9.1.7",
-    "npm-check-updates": "^17.1.18",
+    "npm-check-updates": "^23.0.0",
     "tsup": "^8.5.0",
     "turbo": "2.9.14",
     "typedoc": "^0.28.19",
