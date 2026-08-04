@@ -50,7 +50,7 @@
     "@c3-oss/fim": "^0.1.0",
     "@changesets/cli": "^2.29.7",
     "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1",
+    "@commitlint/config-conventional": "^21.2.0",
     "@commitlint/cz-commitlint": "^19.8.1",
     "@swc-node/register": "^1.11.1",
     "@swc/core": "^1.13.5",
