@@ -14,9 +14,7 @@
     "url": "git+https://github.com/c3-oss/doppel.git",
     "directory": "apps/cli"
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -47,16 +45,16 @@
     "clean": "rm -rf dist coverage .turbo"
   },
   "dependencies": {
-    "@trpc/client": "^11.7.0",
+    "@trpc/client": "^11.18.0",
     "commander": "^12.1.0",
-    "playwright-core": "^1.60.0",
+    "playwright-core": "^1.62.1",
     "superjson": "^2.2.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@c3-oss/config-biome": "^0.3.1",
-    "@c3-oss/config-tsup": "^0.2.0",
+    "@c3-oss/config-tsup": "^0.2.1",
     "@c3-oss/config-typescript": "^0.1.0",
-    "@c3-oss/config-vitest": "^0.3.0"
+    "@c3-oss/config-vitest": "^0.3.1"
   }
 }
