@@ -60,6 +60,7 @@ jobs:
           # trusted publishing (OIDC, >= 11.5.1) and only warns.
           npm install -g npm@11
 
+          pnpm config set git-checks false
           pnpm exec changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
