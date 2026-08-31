@@ -55,23 +55,10 @@ jobs:
             sed -i '/_authToken/d' "${NPM_CONFIG_USERCONFIG}"
           fi
 
-          # pnpm 10.8.1 forwards --no-git-checks to npm; npm 12 errors on it.
-          real_npm="$(command -v npm)"
-          wrap_dir="${RUNNER_TEMP}/npm-wrap"
-          mkdir -p "${wrap_dir}"
-          cat > "${wrap_dir}/npm" <<EOF
-          #!/usr/bin/env bash
-          args=()
-          for a in "\$@"; do
-            case "\$a" in
-              --git-checks|--no-git-checks|--git-checks=*) continue ;;
-            esac
-            args+=("\$a")
-          done
-          exec "${real_npm}" "\${args[@]}"
-          EOF
-          chmod +x "${wrap_dir}/npm"
-          export PATH="${wrap_dir}:${PATH}"
+          # pnpm 10.8.1 delegates publish to npm and forwards --git-checks.
+          # npm 12 errors on that unknown flag; npm 11.x still supports
+          # trusted publishing (OIDC, >= 11.5.1) and only warns.
+          npm install -g npm@11
 
           pnpm exec changeset publish
         env:
