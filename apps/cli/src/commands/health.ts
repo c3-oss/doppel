@@ -20,10 +20,10 @@ export interface HealthStatus {
   service: string
 }
 
-const healthSchema: z.ZodType<HealthStatus> = z.object({
+const healthSchema = z.object({
   ok: z.literal(true),
   service: z.string(),
-})
+}) satisfies z.ZodType<HealthStatus, HealthStatus>
 
 /**
  * Offline health result returned when the daemon cannot be reached or parsed.
